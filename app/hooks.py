@@ -5,6 +5,17 @@ app_description = "App for Registration"
 app_email = "app@outlook.com"
 app_license = "mit"
 
+
+fixtures = [
+    {
+        "doctype": "Custom Field",
+        "filters": [
+            ["dt", "=", "User"],
+            ["fieldname", "=", "organization"]
+        ]
+    }
+]
+
 # Apps
 # ------------------
 
@@ -60,9 +71,9 @@ app_license = "mit"
 # home_page = "login"
 
 # website user home page (by Role)
-# role_home_page = {
-# 	"Role": "home_page"
-# }
+role_home_page = {
+	"Organization Admin": "dashboard"
+}
 
 # Generators
 # ----------
@@ -117,9 +128,9 @@ app_license = "mit"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
+permission_query_conditions = {
+	"User": "app.api.get_user_permission_query",
+}
 #
 # has_permission = {
 # 	"Event": "frappe.desk.doctype.event.event.has_permission",
@@ -137,13 +148,15 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+    "User Registration": {
+        "on_update": "app.api.handle_registration_approval", # Removed "app.app"
+        "after_save": "app.api.handle_registration_approval"
+    }
+}
+
+
+
 
 # Scheduled Tasks
 # ---------------

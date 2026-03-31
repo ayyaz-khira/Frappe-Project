@@ -1,0 +1,148 @@
+{% extends "templates/web.html" %}
+
+{% block style %}
+<!-- Tailwind CSS and Modern Aesthetic Styles -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Outfit', sans-serif !important;
+        background-color: #0c0e14 !important;
+        color: #f8fafc;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        border-radius: 24px;
+        transition: all 0.3s ease;
+    }
+
+    .input-field {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        transition: all 0.2s ease;
+    }
+
+    .input-field:focus {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: #6366f1;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+    }
+
+    .submit-btn {
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        filter: brightness(1.1);
+    }
+
+    .bg-gradient-mesh {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -2;
+        background: radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gradient-mesh"></div>
+
+<main class="w-full min-h-screen flex items-center justify-center px-4 py-12">
+    <div class="w-full max-w-md">
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-bold mb-3 tracking-tight">Portal Login</h1>
+            <p class="text-slate-400 font-medium">Organization Management Dashboard</p>
+        </div>
+
+        <div class="glass-card p-10">
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label
+                        class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Administrator
+                        Email</label>
+                    <input type="email" id="email" class="input-field w-full rounded-2xl px-5 py-4 font-medium"
+                        placeholder="admin@acme.corp" required autocomplete="username">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Secure
+                        Password</label>
+                    <input type="password" id="password" class="input-field w-full rounded-2xl px-5 py-4 font-medium"
+                        placeholder="••••••••" required autocomplete="current-password">
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" id="login-btn"
+                        class="submit-btn w-full py-4 rounded-2xl font-bold text-lg tracking-wide uppercase transition-all">
+                        Sign In
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="mt-8 text-center text-slate-500 text-sm">
+            <p>New organization? <a href="/contact-us" class="text-indigo-400 font-semibold hover:underline">Apply for
+                    registration</a></p>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block script %}
+<script>
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        frappe.call({
+            method: 'login', // Calls the framework's native login method
+            args: {
+                usr: email,
+                pwd: password
+            },
+            btn: $('#login-btn'), // Automatically handles loading state
+            callback: function (r) {
+                if (r.message === "Logged In" || r.home_page) {
+                    frappe.show_alert({
+                        message: __('Authentication successful. Accessing dashboard...'),
+                        indicator: 'green'
+                    });
+
+                    // Force the redirect to /dashboard immediately
+                    // This bypasses Frappe's default "Go to Desk" logic
+                    window.location.href = r.home_page || '/dashboard';
+                }
+                else {
+                    frappe.msgprint({
+                        title: __('Login Failed'),
+                        indicator: 'red',
+                        message: r.message || __('Invalid email or password.')
+                    });
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

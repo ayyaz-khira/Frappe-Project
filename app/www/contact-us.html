@@ -1,0 +1,334 @@
+{% extends "templates/web.html" %}
+
+{% block style %}
+<!-- Tailwind CSS and Modern Aesthetic Styles -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Outfit', sans-serif !important;
+        background-color: #0c0e14 !important;
+        color: #f8fafc;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+    }
+
+    .bg-gradient-mesh {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -2;
+        background-image: url('/home/ayyazkhira/.gemini/antigravity/brain/7b3f73ad-dcd8-4413-8b2b-a421a7bc19ea/contact_page_bg_abstract_1774519803655.png');
+        background-size: cover;
+        background-position: center;
+        opacity: 0.8;
+        filter: brightness(0.5);
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        border-radius: 24px;
+        transition: all 0.3s ease;
+    }
+
+    .glass-card:hover {
+        border-color: rgba(255, 255, 255, 0.15);
+        box-shadow: 0 8px 32px 0 rgba(99, 102, 241, 0.15);
+    }
+
+    .input-field {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        transition: all 0.2s ease;
+    }
+
+    .input-field:focus {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+        outline: none;
+    }
+
+    select.input-field {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 0.75rem center;
+        background-repeat: no-repeat;
+        background-size: 1.5em 1.5em;
+        padding-right: 2.5rem;
+    }
+
+    /* Force options to be visible on dark background */
+    option {
+        background-color: #0f172a;
+        color: white;
+    }
+
+    .submit-btn {
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        filter: brightness(1.1);
+    }
+
+    .section-title {
+        background: linear-gradient(to right, #ffffff, #94a3b8);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* Floating Animation */
+    @keyframes float {
+        0% {
+            transform: translateY(0px);
+        }
+
+        50% {
+            transform: translateY(-10px);
+        }
+
+        100% {
+            transform: translateY(0px);
+        }
+    }
+
+    .floating-element {
+        animation: float 6s ease-in-out infinite;
+    }
+
+    /* FIX: Message Visibility (Ensures alerts and modals are not "camouflaged") */
+    .frappe-message-box,
+    .alert,
+    .modal-content {
+        background-color: #1e293b !important;
+        /* Solid Dark Blue */
+        color: #f8fafc !important;
+        /* Bright White-Gray */
+        border: 1px solid #6366f1 !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    .modal-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+        justify-content: center !important;
+    }
+
+    .modal-title,
+    .alert-title {
+        font-size: 1.5rem !important;
+        font-weight: 700 !important;
+        color: #818cf8 !important;
+        /* Indigo text for title */
+        letter-spacing: -0.025em;
+    }
+
+    /* Style the Frappe button to match our theme */
+    .modal-footer .btn-primary,
+    .modal-footer .btn-default {
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 10px 30px !important;
+        font-weight: 600 !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .modal-footer .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(99, 102, 241, 0.5) !important;
+        filter: brightness(1.1);
+    }
+
+    .modal-body {
+        font-size: 1.1rem !important;
+        line-height: 1.6 !important;
+        color: #94a3b8 !important;
+        padding: 2rem !important;
+    }
+
+    .modal-backdrop.show {
+        background-color: #020617 !important;
+        opacity: 0.9 !important;
+    }
+
+    /* Override Frappe standard layout */
+    .web-footer,
+    .navbar {
+        display: none !important;
+    }
+
+    .page-container {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gradient-mesh"></div>
+<main class="w-full flex items-center justify-center min-h-screen px-4 py-12">
+    <div class="w-full max-w-4xl">
+        <div class="text-center mb-12 floating-element">
+            <h1 class="text-5xl font-bold mb-4 section-title">Contact Us</h1>
+            <p class="text-slate-400 text-lg max-w-xl mx-auto">We'd love to hear from you. Fill out the form below and
+                we'll get back to you shortly.</p>
+        </div>
+
+        <div class="glass-card p-8 md:p-12">
+            <form id="contact-form" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- First Name -->
+                <div class="flex flex-col gap-2">
+                    <label for="first_name" class="text-sm font-medium text-slate-300 ml-1">First Name</label>
+                    <input type="text" id="first_name" name="first_name" class="input-field rounded-xl px-4 py-3 w-full"
+                        placeholder="John" required>
+                </div>
+
+                <!-- Last Name -->
+                <div class="flex flex-col gap-2">
+                    <label for="last_name" class="text-sm font-medium text-slate-300 ml-1">Last Name</label>
+                    <input type="text" id="last_name" name="last_name" class="input-field rounded-xl px-4 py-3 w-full"
+                        placeholder="Doe" required>
+                </div>
+
+                <!-- Work Email -->
+                <div class="flex flex-col gap-2">
+                    <label for="work_email" class="text-sm font-medium text-slate-300 ml-1">Work Email</label>
+                    <input type="email" id="work_email" name="work_email"
+                        class="input-field rounded-xl px-4 py-3 w-full" placeholder="john@company.com" required>
+                </div>
+
+                <!-- Organization Name -->
+                <div class="flex flex-col gap-2">
+                    <label for="organization_name" class="text-sm font-medium text-slate-300 ml-1">Organization
+                        Name</label>
+                    <input type="text" id="organization_name" name="organization_name"
+                        class="input-field rounded-xl px-4 py-3 w-full" placeholder="Acme Corp" required>
+                </div>
+
+                <!-- Organization Type -->
+                <div class="flex flex-col gap-2">
+                    <label for="organization_type" class="text-sm font-medium text-slate-300 ml-1">Organization
+                        Type</label>
+                    <select id="organization_type" name="organization_type"
+                        class="input-field rounded-xl px-4 py-3 w-full appearance-none" required>
+                        <option value="" disabled selected>Select Type</option>
+                        <option value="Individual (1)">Individual (1)</option>
+                        <option value="Small Team (2-10)">Small Team (2-10)</option>
+                        <option value="Small Organization (11-50)">Small Organization (11-50)</option>
+                        <option value="Medium Organization (51-200)">Medium Organization (51-200)</option>
+                        <option value="Enterprise (200+)">Enterprise (200+)</option>
+                    </select>
+                </div>
+
+                <!-- Payment Status -->
+                <div class="flex flex-col gap-2">
+                    <label for="payment_status" class="text-sm font-medium text-slate-300 ml-1">Payment Status</label>
+                    <select id="payment_status" name="payment_status"
+                        class="input-field rounded-xl px-4 py-3 w-full appearance-none" required>
+                        <option value="" disabled selected>Select Status</option>
+                        <option value="True">True</option>
+                        <option value="False">False</option>
+                    </select>
+                </div>
+
+                <!-- Contact Number -->
+                <div class="flex flex-col gap-2 md:col-span-2">
+                    <label for="contact_number" class="text-sm font-medium text-slate-300 ml-1">Contact Number</label>
+                    <input type="tel" id="contact_number" name="contact_number"
+                        class="input-field rounded-xl px-4 py-3 w-full" placeholder="+1 (555) 000-0000" required>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="md:col-span-2 mt-4">
+                    <button type="submit" id="submit-btn"
+                        class="submit-btn w-full py-4 rounded-xl font-bold text-lg tracking-wide uppercase">
+                        Submit
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer Info -->
+        <!-- <div class="mt-12 text-center text-slate-500 text-sm">
+            <p>Built with passion and Tailwind CSS.</p>
+        </div> -->
+    </div>
+</main>
+{% endblock %}
+
+{% block script %}
+<script>
+    const form = document.getElementById('contact_form');
+
+    // USING FRAPPE.CALL
+    document.getElementById('contact-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        // Collect form data
+        const data = {};
+        new FormData(e.target).forEach((v, k) => data[k] = v);
+
+        // Frappe Call handles loading state and CSRF automatically
+        frappe.call({
+            method: 'app.api.submit_details', // Verify your dotted path
+            args: data,
+            btn: $('#submit-btn'), // Attaches loading state to the button
+            freeze: true, // Prevents dual interaction
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    const paymentStatus = document.getElementById('payment_status').value;
+
+                    if (paymentStatus === 'True') {
+                        frappe.msgprint({
+                            title: __('Application Received!'),
+                            indicator: 'green',
+                            message: __('Your organization registration has been submitted successfully. <b>You will be able to access your dashboard via login once the Super Admin approves your application.</b>')
+                        });
+                    } else {
+                        frappe.msgprint({
+                            title: __('Almost there!'),
+                            indicator: 'blue',
+                            message: __('Registration captured. <b>Please complete your payment processing to activate your account and proceed to approval.</b>')
+                        });
+                    }
+                    e.target.reset();
+                } else if (r.message && r.message.status === 'already_exists') {
+                    frappe.msgprint({
+                        title: __('Notice'),
+                        indicator: 'orange',
+                        message: r.message.message
+                    });
+                } else {
+                    frappe.msgprint({
+                        title: __('Error'),
+                        indicator: 'red',
+                        message: r.message.message || __('An error occurred during submission.')
+                    });
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
