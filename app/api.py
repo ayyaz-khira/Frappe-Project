@@ -96,13 +96,305 @@ def capture_registration_lead(first_name, last_name, work_email, organization_na
 
 
 
-@frappe.whitelist(allow_guest=True)
-def submit_details(first_name, last_name, work_email, organization_name, contact_number, organization_type, payment_status):
+import hashlib
+import requests
+import json
+
+PAYU_PAYOUT_CLIENT_ID = "ccbb70745faad9c06092bb5c79bfd919b6f45fd454f34619d83920893e90ae6b"
+PAYU_PAYOUT_CLIENT_SECRET = "534bcc8c227b0b5c4e0a62290e8faa17fd73e6d3dfa43f796572dda5044dd313" # Re-using secret from first prompt
+PAYU_PAYOUT_BASE_URL = "https://payout-api-uat.payu.in" # UAT for Payouts
+
+@frappe.whitelist()
+def get_payu_payout_token():
+    auth_str = f"{PAYU_PAYOUT_CLIENT_ID}:{PAYU_PAYOUT_CLIENT_SECRET}"
+    encoded_auth = base64.b64encode(auth_str.encode()).decode()
     
-    if not all([first_name, last_name, work_email, organization_name, contact_number, organization_type, payment_status]):
-        frappe.throw(_("All fields are required"))
+    url = f"{PAYU_PAYOUT_BASE_URL}/payout/v1/auth/token"
+    headers = {
+        "Authorization": f"Basic {encoded_auth}",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    payload = "grant_type=client_credentials"
+    
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        if response.status_code == 200:
+            return response.json().get("access_token")
+        else:
+            frappe.log_error(response.text, "PayU Payout Token Error")
+            return None
+    except Exception as e:
+        frappe.log_error(str(e), "PayU Payout Token Exception")
+        return None
+
+@frappe.whitelist()
+def create_payout(member, amount, account_number, ifsc_code):
+    token = get_payu_payout_token()
+    if not token:
+        frappe.throw(_("Could not authenticate with PayU Payouts API"))
+        
+    url = f"{PAYU_PAYOUT_BASE_URL}/payout/v1/transfer"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    
+    # Generate unique transfer ID
+    transfer_id = frappe.generate_hash(length=20)
+    
+    payload = {
+        "transferId": transfer_id,
+        "amount": str(amount),
+        "beneficiaryAccountNumber": account_number,
+        "beneficiaryIfscCode": ifsc_code,
+        "beneficiaryName": frappe.db.get_value("Org User Item", member, "name1") or "Beneficiary",
+        "purpose": "Salary/Payment",
+        "beneficiaryEmail": frappe.db.get_value("Org User Item", member, "email"),
+        "transferMode": "IMPS"
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        res_json = response.json()
+        
+        # Save Payout Record
+        payout = frappe.get_doc({
+            "doctype": "PayU Payout",
+            "member": member,
+            "amount": amount,
+            "account_number": account_number,
+            "ifsc_code": ifsc_code,
+            "payout_id": transfer_id,
+            "full_response": json.dumps(res_json)
+        })
+        
+        if response.status_code in [200, 202]:
+            payout.status = "Pending" # Usually pending until success callback
+            payout.insert(ignore_permissions=True)
+            frappe.db.commit()
+            return {"status": "success", "message": "Payout initiated", "payout_id": transfer_id}
+        else:
+            payout.status = "Failed"
+            payout.insert(ignore_permissions=True)
+            frappe.db.commit()
+            return {"status": "error", "message": res_json.get("message", "Payout Failed")}
+            
+    except Exception as e:
+        frappe.log_error(str(e), "Payout API Exception")
+        return {"status": "error", "message": str(e)}
+
+@frappe.whitelist()
+def check_payout_status(payout_id):
+    token = get_payu_payout_token()
+    if not token: return None
+    
+    url = f"{PAYU_PAYOUT_BASE_URL}/payout/v1/transfer/status/{payout_id}"
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    try:
+        response = requests.get(url, headers=headers)
+        res_json = response.json()
+        status = res_json.get("status") # SUCCESS/FAILURE/PENDING
+        
+        # Update record
+        pt_name = frappe.db.get_value("PayU Payout", {"payout_id": payout_id}, "name")
+        if pt_name:
+            pt = frappe.get_doc("PayU Payout", pt_name)
+            if status == "SUCCESS": pt.status = "Success"
+            elif status == "FAILURE": pt.status = "Failed"
+            pt.full_response = json.dumps(res_json)
+            pt.save(ignore_permissions=True)
+            frappe.db.commit()
+            
+        return {"status": pt.status}
+    except Exception as e:
+        return None
+
+PAYU_KEY = "SCcYkX"
+PAYU_SALT = "Vyi137dOKlxYSVlaF1jWHInS7zoLBbOS"
+PAYU_URL = "https://test.payu.in/_payment" # Use test URL for now
+
+def generate_payu_hash(data):
+    # hashSequence = key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||salt
+    hash_args = [
+        PAYU_KEY.strip(),
+        data.get("txnid", ""),
+        data.get("amount", ""),
+        data.get("productinfo", ""),
+        data.get("firstname", ""),
+        data.get("email", ""),
+        data.get("udf1", ""),
+        data.get("udf2", ""),
+        data.get("udf3", ""),
+        data.get("udf4", ""),
+        data.get("udf5", ""),
+        "", "", "", "", "", # Placeholder for more udfs
+        PAYU_SALT.strip()
+    ]
+    hash_string = "|".join(hash_args)
+    return hashlib.sha512(hash_string.encode('utf-8')).hexdigest().lower()
+
+def verify_payu_hash(data):
+    # Hash reverse sequence for verifying response from PayU
+    # salt|status|udf10|udf9|udf8|udf7|udf6|udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key
+    response_hash_args = [
+        PAYU_SALT.strip(),
+        data.get("status", ""),
+        data.get("udf10", ""),
+        data.get("udf9", ""),
+        data.get("udf8", ""),
+        data.get("udf7", ""),
+        data.get("udf6", ""),
+        data.get("udf5", ""),
+        data.get("udf4", ""),
+        data.get("udf3", ""),
+        data.get("udf2", ""),
+        data.get("udf1", ""),
+        data.get("email", ""),
+        data.get("firstname", ""),
+        data.get("productinfo", ""),
+        data.get("amount", ""),
+        data.get("txnid", ""),
+        data.get("key", "")
+    ]
+    hash_string = "|".join(response_hash_args)
+    calculated_hash = hashlib.sha512(hash_string.encode('utf-8')).hexdigest().lower()
+    return calculated_hash == data.get("hash")
+
+@frappe.whitelist(allow_guest=True)
+def initiate_payment(user_registration_id, amount):
+    if not frappe.db.exists("User Registration", user_registration_id):
+        frappe.throw(_("Invalid registration ID"))
+        
+    try:
+        amount_float = float(amount)
+        if amount_float <= 0:
+            frappe.throw(_("Amount must be greater than zero"))
+    except ValueError:
+        frappe.throw(_("Invalid amount format"))
+
+    # Generate strictly alphanumeric transaction ID (max 100 char, but hex is safe)
+    txnid = frappe.generate_hash(length=12) 
+    
+    # Create Payment Transaction record
+    pt = frappe.get_doc({
+        "doctype": "Payment Transaction",
+        "user_registration": user_registration_id,
+        "amount": amount_float,
+        "status": "Pending",
+        "transaction_id": txnid,
+        "payment_gateway": "PayU India"
+    })
+    pt.insert(ignore_permissions=True)
+    frappe.db.commit()
+    
+    reg_doc = frappe.get_doc("User Registration", user_registration_id)
+    
+    # Clean phone number (only digits)
+    phone = "".join(filter(str.isdigit, str(reg_doc.contact_number or "")))
+    phone = str(phone)[-10:]
+    
+    # Strictly alphanumeric firstname and productinfo
+    firstname = "".join(filter(str.isalnum, (reg_doc.first_name or "User").split(" ")[0]))[:20]
+    productinfo = "".join(filter(str.isalnum, (reg_doc.name or "Payment")))[:50]
+        
+    payment_data = {
+        "key": PAYU_KEY.strip(),
+        "txnid": txnid,
+        "amount": "{:.2f}".format(float(amount)),
+        "productinfo": productinfo,
+        "firstname": firstname,
+        "email": reg_doc.work_email,
+        "phone": phone,
+        "surl": frappe.utils.get_url("/api/method/app.api.payu_success"),
+        "furl": frappe.utils.get_url("/api/method/app.api.payu_failure"),
+        # Removed service_provider to avoid 500 errors on specific gatewy accounts
+        "udf1": "", "udf2": "", "udf3": "", "udf4": "", "udf5": "",
+        "udf6": "", "udf7": "", "udf8": "", "udf9": "", "udf10": ""
+    }
+    
+    payment_data["hash"] = generate_payu_hash(payment_data)
+    
+    return {
+        "status": "success",
+        "payment_url": PAYU_URL,
+        "params": payment_data
+    }
+
+@frappe.whitelist(allow_guest=True)
+def payu_success():
+    # Finalize transaction
+    data = frappe.local.form_dict
+    
+    # Security: Verify Hash
+    if not verify_payu_hash(data):
+        frappe.log_error(title="PayU Success Signature Fail", message=json.dumps(data, indent=4))
+        frappe.local.response["type"] = "redirect"
+        frappe.local.response["location"] = "/contact-us?error=invalid_signature"
+        return
+
+    txnid = data.get("txnid")
+    if txnid:
+        pt_name = frappe.db.get_value("Payment Transaction", {"transaction_id": txnid}, "name")
+        if pt_name:
+            pt = frappe.get_doc("Payment Transaction", pt_name)
+            pt.status = "Success"
+            pt.full_response = json.dumps(data)
+            pt.save(ignore_permissions=True)
+            
+            # Update User Registration
+            reg = frappe.get_doc("User Registration", pt.user_registration)
+            reg.payment_status = "True"
+            reg.save(ignore_permissions=True)
+            frappe.db.commit()
+            
+    # Redirect to success page or dashboard
+    reg_id = ""
+    if txnid:
+        reg_id = frappe.db.get_value("Payment Transaction", {"transaction_id": txnid}, "user_registration") or ""
+        
+    frappe.local.response["type"] = "redirect"
+    frappe.local.response["location"] = "/contact-us?status=received"
+    return
+
+@frappe.whitelist(allow_guest=True)
+def payu_failure():
+    data = frappe.local.form_dict
+    
+    # Security: Verify Hash (Optional but good for logging)
+    if not verify_payu_hash(data):
+        frappe.log_error(title="PayU Failure Signature Fail", message=json.dumps(data, indent=4))
+
+    txnid = data.get("txnid")
+    if txnid:
+        pt_name = frappe.db.get_value("Payment Transaction", {"transaction_id": txnid}, "name")
+        if pt_name:
+            pt = frappe.get_doc("Payment Transaction", pt_name)
+            pt.status = "Failed"
+            pt.full_response = json.dumps(data)
+            pt.save(ignore_permissions=True)
+            frappe.db.commit()
+            
+    frappe.local.response["type"] = "redirect"
+    frappe.local.response["location"] = "/contact-us?error=payment_failed"
+    return
+
+@frappe.whitelist(allow_guest=True)
+def submit_details(first_name, last_name, work_email, organization_name, contact_number, organization_type, payment_status, number_of_users=1):
+    
+    if not all([first_name, last_name, work_email, organization_name, contact_number, organization_type]):
+        frappe.throw(_("All main fields are required"))
+
+    # Email Validation
+    if not frappe.utils.validate_email_address(work_email):
+        frappe.throw(_("Invalid email address: {0}").format(work_email))
+        
+    # Phone number length validation (Basic)
+    if len("".join(filter(str.isdigit, str(contact_number)))) < 8:
+        frappe.throw(_("Invalid contact number"))
 
     if frappe.db.exists("User Registration", {"work_email": work_email}):
+        # Handle update if needed, but here we'll stick to error per current logic
         return {
             "status": "already_exists",
             "message": _("A registration request with this email already exists.")
@@ -117,6 +409,7 @@ def submit_details(first_name, last_name, work_email, organization_name, contact
             "organization_name": organization_name,
             "contact_number": contact_number,
             "organization_type": organization_type,
+            "number_of_users": number_of_users,
             "payment_status": payment_status,
             "approval_status": "Pending Approval" 
         })
@@ -126,7 +419,7 @@ def submit_details(first_name, last_name, work_email, organization_name, contact
 
         return {
             "status": "success",
-            "message": _("User captured successfully"),
+            "message": _("User registration captured successfully"),
             "name": user.name
         }
 
@@ -326,6 +619,7 @@ def handle_registration_approval(doc, method):
         
         # 3. Insert and save
         new_user.insert(ignore_permissions=True)
+        new_user.send_welcome_mail_to_user() # Explicitly trigger welcome email
         
         # 4. Add the specific role we just created
         new_user.add_roles("Organization Admin") 

@@ -1,0 +1,77 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-31 16:50:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user_registration",
+  "amount",
+  "transaction_id",
+  "status",
+  "payment_gateway",
+  "full_response"
+ ],
+ "fields": [
+  {
+   "fieldname": "user_registration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "User Registration",
+   "options": "User Registration"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount"
+  },
+  {
+   "fieldname": "transaction_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Transaction ID"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending\nSuccess\nFailed"
+  },
+  {
+   "default": "PayU",
+   "fieldname": "payment_gateway",
+   "fieldtype": "Data",
+   "label": "Payment Gateway"
+  },
+  {
+   "fieldname": "full_response",
+   "fieldtype": "Small Text",
+   "label": "Full Response"
+  }
+ ],
+ "modified": "2026-03-31 16:50:00.000000",
+ "modified_by": "Administrator",
+ "module": "App",
+ "name": "Payment Transaction",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

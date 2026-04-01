@@ -227,31 +227,27 @@
                         class="input-field rounded-xl px-4 py-3 w-full" placeholder="Acme Corp" required>
                 </div>
 
-                <!-- Organization Type -->
+                <!-- Number of Users -->
                 <div class="flex flex-col gap-2">
-                    <label for="organization_type" class="text-sm font-medium text-slate-300 ml-1">Organization
-                        Type</label>
-                    <select id="organization_type" name="organization_type"
-                        class="input-field rounded-xl px-4 py-3 w-full appearance-none" required>
-                        <option value="" disabled selected>Select Type</option>
-                        <option value="Individual (1)">Individual (1)</option>
-                        <option value="Small Team (2-10)">Small Team (2-10)</option>
-                        <option value="Small Organization (11-50)">Small Organization (11-50)</option>
-                        <option value="Medium Organization (51-200)">Medium Organization (51-200)</option>
-                        <option value="Enterprise (200+)">Enterprise (200+)</option>
-                    </select>
+                    <label for="number_of_users" class="text-sm font-medium text-slate-300 ml-1">Number of Users</label>
+                    <input type="number" id="number_of_users" name="number_of_users" 
+                        class="input-field rounded-xl px-4 py-3 w-full" placeholder="Ex: 10" min="1" value="1" required>
                 </div>
 
-                <!-- Payment Status -->
+                <!-- Price Display -->
                 <div class="flex flex-col gap-2">
-                    <label for="payment_status" class="text-sm font-medium text-slate-300 ml-1">Payment Status</label>
-                    <select id="payment_status" name="payment_status"
-                        class="input-field rounded-xl px-4 py-3 w-full appearance-none" required>
-                        <option value="" disabled selected>Select Status</option>
-                        <option value="True">True</option>
-                        <option value="False">False</option>
-                    </select>
+                    <label class="text-sm font-medium text-slate-300 ml-1">Estimated Price</label>
+                    <div class="input-field rounded-xl px-4 py-3 w-full flex items-center justify-between bg-indigo-500/10 border-indigo-500/30">
+                        <span class="text-slate-400 font-mono">Total:</span>
+                        <span id="price-display" class="text-xl font-bold text-indigo-400">$10.00</span>
+                    </div>
                 </div>
+
+                <!-- Organization Type (Automated based on count) -->
+                <input type="hidden" id="organization_type" name="organization_type" value="Small Team">
+
+                <!-- Payment Status (Initial state is always False, updated via PayU callback) -->
+                <input type="hidden" id="payment_status" name="payment_status" value="False">
 
                 <!-- Contact Number -->
                 <div class="flex flex-col gap-2 md:col-span-2">
@@ -280,41 +276,84 @@
 
 {% block script %}
 <script>
-    const form = document.getElementById('contact_form');
+    // Price Calculation Logic
+    const PRICE_PER_USER = 10;
+    const numUsersInput = document.getElementById('number_of_users');
+    const priceDisplay = document.getElementById('price-display');
+    const orgTypeInput = document.getElementById('organization_type');
 
-    // USING FRAPPE.CALL
+    function updatePrice() {
+        const count = parseInt(numUsersInput.value) || 0;
+        const total = count * PRICE_PER_USER;
+        priceDisplay.innerText = `$${total.toFixed(2)}`;
+        
+        // Automated Classification
+        if (count === 1) orgTypeInput.value = "Individual";
+        else if (count <= 10) orgTypeInput.value = "Small Team";
+        else if (count <= 50) orgTypeInput.value = "Small Organization";
+        else if (count <= 200) orgTypeInput.value = "Medium Organization";
+        else orgTypeInput.value = "Enterprise";
+    }
+
+    numUsersInput.addEventListener('input', updatePrice);
+
+    // Form submission
     document.getElementById('contact-form').addEventListener('submit', (e) => {
         e.preventDefault();
 
-        // Collect form data
         const data = {};
         new FormData(e.target).forEach((v, k) => data[k] = v);
 
-        // Frappe Call handles loading state and CSRF automatically
         frappe.call({
-            method: 'app.api.submit_details', // Verify your dotted path
+            type: 'POST',
+            url: '/api/method/app.api.submit_details',
             args: data,
-            btn: $('#submit-btn'), // Attaches loading state to the button
-            freeze: true, // Prevents dual interaction
+            btn: $('#submit-btn'),
+            freeze: true,
             callback: function (r) {
                 if (r.message && r.message.status === 'success') {
-                    const paymentStatus = document.getElementById('payment_status').value;
-
-                    if (paymentStatus === 'True') {
-                        frappe.msgprint({
-                            title: __('Application Received!'),
-                            indicator: 'green',
-                            message: __('Your organization registration has been submitted successfully. <b>You will be able to access your dashboard via login once the Super Admin approves your application.</b>')
-                        });
-                    } else {
-                        frappe.msgprint({
-                            title: __('Almost there!'),
-                            indicator: 'blue',
-                            message: __('Registration captured. <b>Please complete your payment processing to activate your account and proceed to approval.</b>')
-                        });
-                    }
+                    const regId = r.message.name;
+                    const amount = parseInt(numUsersInput.value) * PRICE_PER_USER;
+                    
+                    frappe.show_alert({ message: __('Initiating Payment...'), indicator: 'blue' });
+                    
+                    frappe.call({
+                        type: 'POST',
+                        url: '/api/method/app.api.initiate_payment',
+                        args: {
+                            user_registration_id: regId,
+                            amount: amount
+                        },
+                        callback: function(res) {
+                            if (res.message && res.message.status === 'success') {
+                                // Create a hidden form to post to PayU India
+                                const form = document.createElement('form');
+                                form.method = 'POST';
+                                form.action = res.message.payment_url;
+                                
+                                for (const key in res.message.params) {
+                                    const input = document.createElement('input');
+                                    input.type = 'hidden';
+                                    input.name = key;
+                                    input.value = res.message.params[key];
+                                    form.appendChild(input);
+                                }
+                                
+                                document.body.appendChild(form);
+                                form.submit();
+                            } else {
+                                frappe.msgprint({
+                                    title: __('Payment Error'),
+                                    indicator: 'red',
+                                    message: res.message.message || __('Failed to generate payment session.')
+                                });
+                            }
+                        }
+                    });
                     e.target.reset();
-                } else if (r.message && r.message.status === 'already_exists') {
+                    updatePrice();
+                }
+ else if (r.message && r.message.status === 'already_exists') {
                     frappe.msgprint({
                         title: __('Notice'),
                         indicator: 'orange',
@@ -329,6 +368,26 @@
                 }
             }
         });
+    });
+    // Check for payment status/failures in URL
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.get('status') === 'received') {
+            frappe.msgprint({
+                title: __('Application Received'),
+                indicator: 'green',
+                message: __('Your payment was successful and your application has been received. Our team will review your details and send a confirmation email with login instructions once approved.')
+            });
+        }
+        
+        if (urlParams.get('error') === 'payment_failed') {
+            frappe.msgprint({
+                title: __('Payment Status'),
+                indicator: 'red',
+                message: __('Your payment attempt failed. Please try again or contact support.')
+            });
+        }
     });
 </script>
 {% endblock %}

@@ -11,6 +11,7 @@
   "organization_name",
   "contact_number",
   "organization_type",
+  "number_of_users",
   "payment_status",
   "approval_status",
   "members",
@@ -47,6 +48,11 @@
    "fieldname": "organization_type",
    "fieldtype": "Data",
    "label": "Organization Type"
+  },
+  {
+   "fieldname": "number_of_users",
+   "fieldtype": "Int",
+   "label": "Number of Users"
   },
   {
    "fieldname": "payment_status",

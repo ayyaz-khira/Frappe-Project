@@ -330,7 +330,8 @@
         }
 
         frappe.call({
-            method: 'app.api.get_org_users',
+            type: 'POST',
+            url: '/api/method/app.api.get_org_users',
             args: { registration_id: registrationId },
             callback: function (r) {
                 if (r.message && r.message.status === 'success') {
@@ -340,7 +341,8 @@
         });
 
         frappe.call({
-            method: 'app.api.get_user_capacity',
+            type: 'POST',
+            url: '/api/method/app.api.get_user_capacity',
             args: { registration_id: registrationId },
             callback: function (r) {
                 const cap = r.message === 999999 ? 'Unlimited' : r.message;
@@ -433,7 +435,8 @@
             e.preventDefault();
 
             frappe.call({
-                method: 'app.api.add_org_user',
+                type: 'POST',
+                url: '/api/method/app.api.add_org_user',
                 btn: $(this).find('button'), // Automatically handles loading/disabled/reset state
                 args: {
                     registration_id: registrationId,
@@ -481,7 +484,8 @@
             const filedata = e.target.result;
 
             frappe.call({
-                method: 'app.api.upload_csv_base64',
+                type: 'POST',
+                url: '/api/method/app.api.upload_csv_base64',
                 args: {
                     registration_id: registrationId,
                     filename: file.name,
@@ -511,6 +515,17 @@
         reader.readAsDataURL(file);
     }
 
-    document.addEventListener('DOMContentLoaded', loadMembers);
+    document.addEventListener('DOMContentLoaded', () => {
+        loadMembers();
+        
+        // Show success alert if coming from a successful payment
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('payment') === 'success') {
+            frappe.show_alert({
+                message: __('Payment Successful! Your registration is complete.'),
+                indicator: 'green'
+            }, 5);
+        }
+    });
 </script>
 {% endblock %}
