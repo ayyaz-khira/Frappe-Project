@@ -9,6 +9,7 @@
 <link
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     :root {
         --primary: #6366f1;
@@ -151,21 +152,98 @@
         border-bottom: none;
     }
 
-    .org-row {
-        transition: all 0.2s;
+    /* Modern Org Cards UI matching screenshot */
+    .org-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        border: 1px solid var(--glass-border);
+        padding: 12px 24px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
     }
 
-    .org-row:hover {
-        background: rgba(99, 102, 241, 0.03);
+    .org-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary);
+    }
+
+    .avatar-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 14px;
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .progress-track {
+        width: 120px;
+        height: 6px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 1s ease-in-out;
+    }
+
+    .status-active {
+        background: #ecfdf5;
+        color: #059669;
+    }
+
+    [data-theme="dark"] .status-active {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+    }
+
+    .status-trial {
+        background: #fffbeb;
+        color: #d97706;
+    }
+
+    [data-theme="dark"] .status-trial {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+    }
+
+    .status-suspended {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    [data-theme="dark"] .status-suspended {
+        background: rgba(244, 63, 94, 0.15);
+        color: #fb7185;
+    }
+
+    .plan-badge {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+    }
+
+    [data-theme="dark"] .progress-track {
+        background: rgba(255, 255, 255, 0.1);
     }
 
     /* Modern Badges */
     .p-badge {
         padding: 4px 10px;
-        border-radius: 8px;
-        font-size: 11px;
-        font-weight: 600;
+        border-radius: 9999px;
+        font-size: 10px;
+        font-weight: 700;
     }
 
     .badge-indigo {
@@ -212,6 +290,41 @@
 
     ::-webkit-scrollbar-thumb:hover {
         background: var(--text-secondary);
+    }
+
+    /* Modal UI */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .modal-content {
+        background: var(--card-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        width: 100%;
+        max-width: 950px;
+        padding: 32px;
+        position: relative;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
     }
 </style>
 {% endblock %}
@@ -264,16 +377,6 @@
             </svg>
             <span>Appearance</span>
         </button>
-
-        <button onclick="logoutAdmin()"
-            class="mt-4 flex items-center justify-center p-2 rounded-xl bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-all w-full text-[10px] uppercase font-bold tracking-widest border border-red-500/20">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
-                </path>
-            </svg>
-            Sign Out
-        </button>
     </div>
 </aside>
 
@@ -296,11 +399,84 @@
         </div>
     </div>
 
+    <!-- Alerts Modal -->
+    <div id="alerts-modal" class="modal-overlay" onclick="closeAlertsModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h3 class="text-xl font-bold dynamic-text">System Alerts</h3>
+                    <p class="text-xs text-slate-500 font-medium">Critical events and user activities</p>
+                </div>
+                <button onclick="closeAlertsModal()" class="p-2 hover:bg-slate-500/10 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="alerts-list-container" class="max-h-[500px] overflow-y-auto space-y-3 pr-2">
+                <div class="py-10 text-center text-slate-500 italic">Checking for alerts...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Modal -->
+    <div id="users-modal" class="modal-overlay" onclick="closeUsersModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h3 class="text-xl font-bold dynamic-text">User Directory</h3>
+                    <p class="text-xs text-slate-500 font-medium">All registered users across the ecosystem</p>
+                </div>
+                <button onclick="closeUsersModal()" class="p-2 hover:bg-slate-500/10 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="users-list-container" class="max-h-[500px] overflow-y-auto space-y-3 pr-2">
+                <div class="py-10 text-center text-slate-500 italic">Fetching user data...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Modal -->
+    <div id="chart-modal" class="modal-overlay" onclick="closeChartModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h3 class="text-xl font-bold dynamic-text">Ecosystem Growth</h3>
+                    <p class="text-xs text-slate-500 font-medium">Monthly organization registration velocity</p>
+                </div>
+                <button onclick="closeChartModal()" class="p-2 hover:bg-slate-500/10 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div class="relative h-[400px]">
+                    <h4 class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-4">Growth Curve</h4>
+                    <canvas id="growthChart"></canvas>
+                </div>
+                <div class="relative h-[400px] flex flex-col">
+                    <h4 class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-4">Plan Distribution
+                    </h4>
+                    <div class="flex-1 min-h-0">
+                        <canvas id="planChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Stats Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div class="stat-card">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div class="stat-card cursor-pointer" onclick="showOrgGrowthChart()">
             <div class="flex justify-between items-center mb-4">
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Organizations</p>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Orgs</p>
                 <div class="p-2 bg-indigo-500/10 rounded-lg text-indigo-500">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -309,12 +485,16 @@
                     </svg>
                 </div>
             </div>
-            <h2 class="text-4xl font-bold dynamic-text" id="total-orgs">0</h2>
+            <h2 class="text-4xl font-bold dynamic-text mb-2" id="total-orgs">0</h2>
+            <p class="text-xs font-medium text-emerald-500" id="active-orgs">0 active</p>
         </div>
-        <div class="stat-card">
+        <div class="stat-card cursor-pointer group" onclick="window.location.href='/admin-users'">
             <div class="flex justify-between items-center mb-4">
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Members</p>
-                <div class="p-2 bg-violet-500/10 rounded-lg text-violet-500">
+                <p
+                    class="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-violet-500 transition-colors">
+                    Total Users</p>
+                <div
+                    class="p-2 bg-violet-500/10 rounded-lg text-violet-500 group-hover:bg-violet-500 group-hover:text-white transition-all">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
@@ -322,50 +502,278 @@
                     </svg>
                 </div>
             </div>
-            <h2 class="text-4xl font-bold dynamic-text" id="total-managed">0</h2>
+            <h2 class="text-4xl font-bold dynamic-text mb-2" id="total-managed">0</h2>
+            <div class="flex justify-between items-center">
+                <p class="text-xs font-medium text-emerald-500" id="enabled-users">0 enabled</p>
+                <span
+                    class="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1 group-hover:text-indigo-500 transition-colors">
+                    Manage <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7"></path>
+                    </svg>
+                </span>
+            </div>
+        </div>
+        <div class="stat-card cursor-pointer group" onclick="showSystemAlerts()">
+            <div class="flex justify-between items-center mb-4">
+                <p
+                    class="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-rose-500 transition-colors">
+                    Open Alerts</p>
+                <div
+                    class="p-2 bg-rose-500/10 rounded-lg text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                        </path>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-4xl font-bold dynamic-text mb-2 text-rose-500" id="open-alerts">0</h2>
+            <p class="text-xs font-medium text-rose-500/80">Needs attention</p>
         </div>
     </div>
 
-    <!-- Master Table -->
-    <div class="table-container shadow-2xl">
-        <div class="p-8 border-b border-slate-700/10 flex justify-between items-center">
-            <h3 class="text-xl font-bold dynamic-text">Ecosystem Directory</h3>
-            <button onclick="loadAdminStats()"
-                class="p-3 bg-slate-500/5 rounded-xl hover:bg-slate-500/10 transition-all group">
-                <svg class="w-5 h-5 text-indigo-500 group-hover:rotate-180 transition-transform duration-500"
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
-                    </path>
-                </svg>
+    <!-- Layout Tabs & Filters matching the screenshot -->
+    <div class="flex flex-col gap-4 mb-6">
+        <!-- Tabs -->
+        <div class="flex items-center gap-2 border-b border-slate-700/10 pb-4">
+            <button
+                class="px-5 py-2 font-semibold text-sm rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                Organizations
+            </button>
+            <button
+                class="px-5 py-2 font-medium text-sm rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition">
+                User activity
+            </button>
+            <button onclick="showSystemAlerts()"
+                class="px-5 py-2 font-medium text-sm rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition flex items-center">
+                Alerts <span
+                    class="bg-rose-100 text-rose-600 dark:bg-rose-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold ml-2"
+                    id="tab-alert-count">0</span>
             </button>
         </div>
-        <div class="overflow-x-auto min-h-[400px]">
-            <table class="w-full">
-                <thead>
-                    <tr>
-                        <th class="pl-10">Organization Name</th>
-                        <th>Organization Type</th>
-                        <th>Admin</th>
-                        <th>Active Members</th>
-                        <th class="text-right pr-10">Onboarded</th>
-                    </tr>
-                </thead>
-                <tbody id="org-tbody">
-                    <!-- Row injection -->
-                </tbody>
-            </table>
+
+        <!-- Filters -->
+        <div class="flex flex-col sm:flex-row gap-4 items-center">
+            <div class="relative flex-1 w-full">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <input type="text" id="search-org" oninput="filterOrgs()" placeholder="Search organization..."
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition">
+            </div>
+            <div class="flex gap-4 w-full sm:w-auto">
+                <select id="filter-plan"
+                    class="w-full sm:w-40 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none">
+                    <option value="">All plans</option>
+                    <option value="Free">Free</option>
+                    <option value="Starter">Starter</option>
+                    <option value="Pro">Pro</option>
+                    <option value="Enterprise">Enterprise</option>
+                </select>
+                <select id="filter-status"
+                    class="w-full sm:w-40 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none">
+                    <option value="">All statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Admin">Admin</option>
+                </select>
+            </div>
         </div>
+    </div>
+
+    <!-- Ecosystem Directory - Card based matching screenshot -->
+    <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold dynamic-text">Ecosystem Directory</h3>
+        <button onclick="loadAdminStats()"
+            class="p-3 bg-slate-500/5 rounded-xl hover:bg-slate-500/10 transition-all group">
+            <svg class="w-5 h-5 text-indigo-500 group-hover:rotate-180 transition-transform duration-500" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                </path>
+            </svg>
+        </button>
+    </div>
+
+    <div id="org-list-container" class="space-y-3 min-h-[400px]">
+        <!-- List injection -->
+        <div class="py-20 text-center text-slate-500 italic">Scanning Ecosystem...</div>
     </div>
 </main>
 {% endblock %}
 
 {% block script %}
 <script>
-    // Strict Auth Check - Should be first
-    if (typeof frappe !== 'undefined' && frappe.session.user === "Guest") {
-        window.location.href = "/login";
+    let growthChart = null;
+    let planChart = null;
+
+    function showOrgGrowthChart() {
+        document.getElementById('chart-modal').style.display = 'flex';
+
+        frappe.call({
+            method: 'app.api.get_org_growth_data',
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    renderGrowthChart(r.message.data);
+                    renderPlanChart(r.message.plans);
+                }
+            }
+        });
     }
+
+    function closeChartModal() {
+        document.getElementById('chart-modal').style.display = 'none';
+        if (growthChart) growthChart.destroy();
+        if (planChart) planChart.destroy();
+        growthChart = null;
+        planChart = null;
+    }
+
+    function renderPlanChart(data) {
+        const ctx = document.getElementById('planChart').getContext('2d');
+        if (planChart) planChart.destroy();
+
+        planChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: [
+                        '#6366f1', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#f43f5e'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 15
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#9ca3af',
+                            font: { family: 'Inter', size: 10, weight: '600' },
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderGrowthChart(data) {
+        const ctx = document.getElementById('growthChart').getContext('2d');
+        if (growthChart) growthChart.destroy();
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+
+        growthChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'New Organizations',
+                    data: data.values,
+                    borderColor: '#6366f1',
+                    borderWidth: 4,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6,
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: gradient
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                        ticks: {
+                            color: '#9ca3af',
+                            font: { family: 'Inter', size: 10 },
+                            precision: 0,
+                            stepSize: 1
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#9ca3af', font: { family: 'Inter', size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    function closeAlertsModal() {
+        document.getElementById('alerts-modal').style.display = 'none';
+        loadAdminStats(); // Refresh badge counts
+    }
+
+    function showSystemAlerts() {
+        document.getElementById('alerts-modal').style.display = 'flex';
+        const container = document.getElementById('alerts-list-container');
+
+        frappe.call({
+            method: 'app.api.get_system_alerts',
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    const alerts = r.message.alerts;
+                    if (alerts.length === 0) {
+                        container.innerHTML = '<div class="py-10 text-center text-slate-500 italic">No new alerts. Your system is healthy.</div>';
+                    } else {
+                        container.innerHTML = alerts.map(a => `
+                            <div class="p-5 bg-slate-500/5 rounded-2xl border border-white/5 flex justify-between items-center group transition-all hover:bg-slate-500/10">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="w-2 h-2 rounded-full bg-rose-500 shadow-lg shadow-rose-500/20"></span>
+                                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">${a.alert_type}</p>
+                                    </div>
+                                    <p class="font-bold dynamic-text text-sm">${a.message}</p>
+                                    <p class="text-[10px] text-slate-500 font-medium mt-1">${new Date(a.creation).toLocaleString()}</p>
+                                </div>
+                                <button onclick="markAlertRead('${a.name}')" class="p-2 border border-slate-500/10 rounded-xl hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        `).join('');
+                    }
+                }
+            }
+        });
+    }
+
+    function markAlertRead(alertId) {
+        frappe.call({
+            method: 'app.api.mark_alert_as_read',
+            args: { alert_id: alertId },
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    showSystemAlerts(); // Refresh list
+                }
+            }
+        });
+    }
+
+
 
     const savedTheme = localStorage.getItem('nu_admin_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -382,15 +790,6 @@
 
     // Start initialization with a small delay for the framework browser sync
     setTimeout(initDashboard, 300);
-
-    function logoutAdmin() {
-        frappe.call({
-            method: "logout",
-            callback: function (r) {
-                window.location.href = "/login";
-            }
-        });
-    }
 
     function toggleTheme() {
         const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -411,85 +810,181 @@
     // Initial icon update
     document.addEventListener('DOMContentLoaded', () => updateThemeIcons(savedTheme));
 
+    let globalOrgsData = [];
+
     async function loadAdminStats() {
-        // Prevent double loading if already in progress or has data
-        const tbody = document.getElementById('org-tbody');
-        if (tbody.getAttribute('data-loading') === 'true') return;
+        const container = document.getElementById('org-list-container');
+        if (!container) return;
+        if (container.getAttribute('data-loading') === 'true') return;
 
         const btn = document.querySelector('button[onclick="loadAdminStats()"] svg');
         if (btn) btn.classList.add('animate-spin');
 
-        if (tbody.innerHTML.trim() === '' || tbody.innerHTML.includes('Scanning')) {
-            tbody.innerHTML = '<tr><td colspan="5" class="py-20 text-center text-slate-500 italic">Scanning Ecosystem...</td></tr>';
-        }
-
-        tbody.setAttribute('data-loading', 'true');
+        container.setAttribute('data-loading', 'true');
 
         frappe.call({
             method: 'app.api.get_admin_stats',
             callback: function (r) {
-                tbody.setAttribute('data-loading', 'false');
+                container.setAttribute('data-loading', 'false');
                 if (btn) btn.classList.remove('animate-spin');
                 if (r.message && r.message.status === 'success') {
-                    renderOrgs(r.message.organizations);
+                    globalOrgsData = r.message.organizations;
+                    renderOrgs(globalOrgsData);
                 } else if (r.exc) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="py-20 text-center text-red-500 italic">Telemetry Access Denied</td></tr>';
+                    container.innerHTML = '<div class="py-20 text-center text-red-500 italic">Telemetry Access Denied</div>';
                 }
             }
         });
     }
 
+    function filterOrgs() {
+        const query = document.getElementById('search-org').value.toLowerCase();
+        const filtered = globalOrgsData.filter(o =>
+            (o.organization_name || '').toLowerCase().includes(query) ||
+            (o.work_email || '').toLowerCase().includes(query)
+        );
+        renderOrgs(filtered);
+    }
+
+    function getInitials(name) {
+        if (!name) return '??';
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+    }
+
     function renderOrgs(orgs) {
-        const tbody = document.getElementById('org-tbody');
-        tbody.innerHTML = '';
+        const container = document.getElementById('org-list-container');
+        if (!container) return;
+        container.innerHTML = '';
         let uCount = 0;
+        let activeCount = 0;
+
         document.getElementById('total-orgs').innerText = orgs.length;
+
+        frappe.call({
+            method: 'app.api.get_system_alerts',
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    const alertsCount = r.message.alerts.length;
+                    document.getElementById('open-alerts').innerText = alertsCount;
+                    document.getElementById('tab-alert-count').innerText = alertsCount;
+                }
+            }
+        });
 
         orgs.forEach(o => {
             uCount += o.member_count;
-            tbody.innerHTML += `
-                <tr class="org-row group" onclick="toggleMembers('${o.name}')">
-                    <td class="pl-10">
-                        <p class="font-semibold dynamic-text text-sm group-hover:text-indigo-500 transition-colors">${o.organization_name}</p>
-                    </td>
-                    <td><span class="p-badge badge-indigo text-[10px]">${o.organization_type}</span></td>
-                    <td>
-                        <p class="font-medium text-sm dynamic-text">${o.admin_name}</p>
-                        <p class="text-[11px] text-slate-500">${o.work_email}</p>
-                    </td>
-                    <td>
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold dynamic-text text-sm">${o.member_count}</span>
-                            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-40">Users</span>
+            if (o.approval_status === 'Approved') activeCount++;
+
+            const initials = getInitials(o.organization_name);
+            const creationDate = new Date(o.creation);
+            const joinedStr = `Joined ${creationDate.toLocaleString('default', { month: 'short' })} ${creationDate.getFullYear()}`;
+
+            const capacity = parseInt(o.number_of_users) || 5;
+            uCount += o.member_count;
+            const usagePercent = Math.min((o.member_count / capacity) * 100, 100);
+            const barColor = usagePercent > 80 ? '#f43f5e' : (usagePercent > 40 ? '#f59e0b' : '#10b981');
+            const statusClass = o.approval_status === 'Approved' ? 'status-active' : (o.approval_status === 'Pending Approval' ? 'status-trial' : 'status-suspended');
+            const statusLabel = o.approval_status === 'Approved' ? 'Active' : (o.approval_status === 'Pending Approval' ? 'Trial' : 'Suspended');
+
+            container.innerHTML += `
+                <div class="org-card group hover:bg-slate-50 dark:hover:bg-slate-800/50" onclick="toggleMembers('${o.name}')">
+                    <div class="flex items-center gap-5 min-w-[300px]">
+                        <div class="avatar-circle">
+                            ${initials}
                         </div>
-                    </td>
-                    <td class="text-right pr-10">
-                        <p class="font-semibold dynamic-text text-sm">${new Date(o.creation).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
-                        <p class="text-[10px] text-slate-500 font-medium">${new Date(o.creation).getFullYear()}</p>
-                    </td>
-                </tr>
-                <tr id="sub-row-${o.name}" class="hidden inspect-panel">
-                    <td colspan="5" class="p-0 bg-slate-500/5">
-                        <div class="p-8 border-y border-indigo-500/10">
-                            <div class="flex justify-between items-center mb-6">
-                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-indigo-500 flex items-center gap-3">
-                                    <span class="w-6 h-[2px] bg-indigo-500/40"></span>
-                                    Organization Directory
-                                </h4>
-                                <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                                    Verified Personnel
-                                </div>
-                            </div>
-                            <div id="members-list-${o.name}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <!-- Members -->
+                        <div>
+                            <p class="font-bold dynamic-text group-hover:text-indigo-500 transition-colors uppercase tracking-tight">${o.organization_name}</p>
+                            <p class="text-[12px] text-slate-500">${o.work_email} • ${joinedStr}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end flex-1 gap-6">
+                        <div class="hidden md:flex">
+                            <span class="p-badge plan-badge text-[10px] uppercase tracking-wide px-3 py-1 ring-1 ring-inset ring-indigo-500/10">${o.organization_type || 'Starter'}</span>
+                        </div>
+                        
+                        <div class="flex items-center cursor-pointer" onclick="event.stopPropagation(); updateOrgStatus('${o.name}', ${o.approval_status !== 'Approved'})">
+                            <span class="p-badge ${statusClass} text-[10px] font-bold uppercase tracking-wide px-3 py-1 transition-all hover:opacity-80" id="status-label-${o.name}">
+                                ${statusLabel}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center gap-4">
+                            <p class="text-[12px] font-bold text-slate-600 dark:text-slate-400 min-w-[80px] text-right">${o.member_count}/${capacity} seats</p>
+                            <div class="progress-track w-24">
+                                <div class="progress-fill" style="width: ${usagePercent}%; background: ${barColor}"></div>
                             </div>
                         </div>
-                    </td>
-                </tr>
+
+                        <svg class="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <div id="sub-row-${o.name}" class="hidden inspect-panel mb-4 overflow-hidden rounded-2xl border border-indigo-500/10 bg-slate-500/5">
+                    <div class="p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="text-[11px] font-bold uppercase tracking-widest text-indigo-500 flex items-center gap-3">
+                                <span class="w-6 h-[2px] bg-indigo-500/40"></span>
+                                Member Directory: ${o.organization_name}
+                            </h4>
+                        </div>
+                        <div id="members-list-${o.name}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="col-span-3 py-4 text-center text-xs italic text-slate-500">Loading members...</div>
+                        </div>
+                    </div>
+                </div>
             `;
         });
+
         document.getElementById('total-managed').innerText = uCount;
+
+        // Populate new cards with some relative data
+        const activeOrgsEl = document.getElementById('active-orgs');
+        if (activeOrgsEl) activeOrgsEl.innerText = `${activeCount} active`;
+
+        const enabledUsersEl = document.getElementById('enabled-users');
+        if (enabledUsersEl) enabledUsersEl.innerText = `${uCount} enabled`;
+
+        const alertsEl = document.getElementById('open-alerts');
+        if (alertsEl) alertsEl.innerText = alertsCount;
+
+        const tabAlertsEl = document.getElementById('tab-alert-count');
+        if (tabAlertsEl) tabAlertsEl.innerText = alertsCount;
+
+    }
+
+    async function updateOrgStatus(orgId, isActive) {
+        const status = isActive ? 'Approved' : 'Suspended';
+        const label = document.getElementById(`status-label-${orgId}`);
+
+        // Optimistic UI update
+        if (label) {
+            const oldLabel = label.innerText;
+            const oldClass = label.className;
+
+            label.innerText = isActive ? 'Active' : 'Suspended';
+            label.className = `p-badge text-[10px] font-bold uppercase tracking-wide px-3 py-1 transition-all ${isActive ? 'status-active' : 'status-suspended'}`;
+
+            frappe.call({
+                method: 'app.api.toggle_registration_status',
+                args: { registration_id: orgId, status: status },
+                callback: function (r) {
+                    if (r.message && r.message.status === 'success') {
+                        frappe.show_alert({ message: r.message.message, indicator: 'green' });
+                        loadAdminStats(); // Refresh stats
+                    } else {
+                        frappe.show_alert({ message: 'Status update failed', indicator: 'red' });
+                        // Revert UI on failure
+                        if (label) {
+                            label.innerText = oldLabel;
+                            label.className = oldClass;
+                        }
+                    }
+                }
+            });
+        }
     }
 
     async function toggleMembers(orgId) {
