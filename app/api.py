@@ -3,26 +3,18 @@ import csv
 import base64
 from frappe import _
 
-import requests
-
-
-import random
-
 # Helper to validate if the current user has access to a specific organization registration
 def validate_org_access(registration_id):
     if frappe.session.user == "Guest":
         frappe.throw(_("Please log in to access this information"), frappe.PermissionError)
         
     # Super Admin / System Manager bypass
-    roles = frappe.get_roles()
-    if "System Manager" in roles:
+    if "System Manager" in frappe.get_roles():
         return True
         
-    # Exact check for the linked organization
+    # Check if the user is linked to this specific organization
     user_org = frappe.db.get_value("User", frappe.session.user, "organization")
-    
-    # Robust comparison (handles whitespace or formatting issues)
-    if not user_org or str(user_org).strip() != str(registration_id).strip():
+    if user_org != registration_id:
         frappe.throw(_("You are not authorized to manage this organization"), frappe.PermissionError)
     
     return True
@@ -65,24 +57,27 @@ def get_user_permission_query(user=None):
 
 
 def redirect_after_login(login_manager):
-    user = login_manager.user
-    roles = frappe.get_roles(user)
-    
-    # Debug print
-    print(f"-------------------- Login Hook Triggered -----------------------")
-    print(f"User: {user} | Roles: {roles}")
-    frappe.log_error(title="Login Hook Debug", message=f"User: {user} | Roles: {roles}")
-    
-    # Priority 1: Administrator / System Manager / Organization Admin should go to Dashboard
-    if "System Manager" in roles or "Organization Admin" in roles:
-        # Use the official Frappe way to set a redirect that survives LoginManager.set_user_info
-        frappe.cache.hset("redirect_after_login", user, "/dashboard")
-        
-        # Also set it in response for custom login handlers that might not look at cache
-        frappe.local.response["redirect_to"] = "/dashboard"
+    user = frappe.session.user
+
+    # Create Login Alert
+    if user != "Guest":
+        frappe.get_doc({
+            "doctype": "System Alert",
+            "alert_type": "Login",
+            "message": f"User {user} logged in to the system",
+            "user": user,
+            "is_read": 0
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+
+    # Administrator should always go to Desk
+    if user == "Administrator":
         return
 
-
+    # Organization Admin redirect
+    if "Organization Admin" in frappe.get_roles(user):
+        frappe.local.response["type"] = "redirect"
+        frappe.local.response["location"] = "/dashboard"
 
 
 
@@ -588,60 +583,35 @@ def add_org_user(registration_id, name, email):
 @frappe.whitelist()
 def upload_org_users_csv(registration_id, file_url):
     validate_org_access(registration_id)
-    
-    # Resolve the absolute path
+    # Correctly resolve the absolute path for public/private files
     if file_url.startswith("/files/"):
         file_path = frappe.get_site_path("public", file_url.lstrip("/"))
     elif file_url.startswith("/private/files/"):
         file_path = frappe.get_site_path(file_url.lstrip("/"))
     else:
         file_path = frappe.get_site_path(file_url.lstrip("/"))
-    
     capacity = get_user_capacity(registration_id)
-    # Count ALL members (both enabled and pending) against capacity for bulk import
-    current_count = frappe.db.count("User", {"organization": registration_id})
-
-    # Count ONLY members listed in the organization's directory
-    org_doc = frappe.get_doc("User Registration", registration_id)
-    current_count = len(org_doc.members)
+    current_count = frappe.db.count("User", {"organization": registration_id, "enabled": 1})
 
     if current_count >= capacity:
         return {"status": "error", "message": f"Organization Capacity reached. You have already utilized your limit of {capacity} users."}
     
     inserted = 0
-    duplicates = 0
-    limit_skipped = 0
+    skipped = 0
+    org_doc = frappe.get_doc("User Registration", registration_id)
     
-    # Use utf-8-sig to handle BOM from Excel
-    with open(file_path, mode='r', encoding='utf-8-sig', newline='') as csvfile:
+    with open(file_path, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
-        
-        # Flexibly find headers
-        if not reader.fieldnames:
-             return {"status": "error", "message": "CSV file is empty or unreadable"}
-
-        headers = {k.lower().strip(): k for k in reader.fieldnames}
-        email_key = headers.get('email') or headers.get('work email') or headers.get('email address')
-        name_key = headers.get('name') or headers.get('full name') or headers.get('first name')
-
-        if not email_key:
-             return {"status": "error", "message": "Could not find 'email' header in CSV"}
-
         for row in reader:
-            email = row.get(email_key, '').strip()
-            name = row.get(name_key or '', 'N/A').strip()
+            email = row.get('email', '').strip()
+            name = row.get('name', 'N/A')
             
-            if not email:
-                continue
-
-            if frappe.db.exists("User", email):
-                duplicates += 1
+            if not email or frappe.db.exists("User", email):
+                skipped += 1
                 continue
             
-            # Check capacity inside loop
             if current_count + inserted >= capacity:
-                limit_skipped += 1
-                continue
+                break
             
             new_user = frappe.get_doc({
                 "doctype": "User",
@@ -650,11 +620,11 @@ def upload_org_users_csv(registration_id, file_url):
                 "send_welcome_email": 0,
                 "enabled": 0,
                 "user_type": "Website User",
-                "organization": registration_id
+                "organization": registration_id # ENSURE ISOLATION
             })
             new_user.insert(ignore_permissions=True)
             
-            # Append to the child table in the registration record
+            # Append to the child table
             org_doc.append("members", {
                 "name1": name,
                 "email": email,
@@ -666,13 +636,9 @@ def upload_org_users_csv(registration_id, file_url):
         
     org_doc.save(ignore_permissions=True)
     frappe.db.commit()
-    
-    # Construct a detailed summary message
-    final_msg = f"Imported {inserted} users."
-    if duplicates > 0:
-        final_msg += f" {duplicates} duplicates ignored."
-    if limit_skipped > 0:
-        final_msg += f" {limit_skipped} rows skipped (capacity of {capacity} reached)."
+    final_msg = f"Created {inserted} users. ({skipped} duplicates skipped)."
+    if current_count + inserted >= capacity:
+        final_msg = f"Partial Success: Created {inserted} users, but reached your limit of {capacity}. Some rows were skipped."
         
     return {"status": "success", "message": final_msg}
 
@@ -700,7 +666,7 @@ def upload_csv_base64(registration_id, filename, filedata):
         return upload_org_users_csv(registration_id, file_doc.file_url)
     except Exception as e:
         return {"status": "error", "message": str(e)}
-        
+
 
 @frappe.whitelist()
 def update_member_status(registration_id, email, status):
@@ -734,39 +700,6 @@ def update_member_status(registration_id, email, status):
         return {"status": "success", "message": msg}
     else:
         return {"status": "error", "message": "Member not found in your organization record."}
-
-@frappe.whitelist()
-def remove_org_user(registration_id, email):
-    validate_org_access(registration_id)
-    if not registration_id or not email:
-        return {"status": "error", "message": "Missing required information"}
-        
-    # 1. Disconnect user from organization record
-    org_doc = frappe.get_doc("User Registration", registration_id)
-    new_members = []
-    user_found = False
-    for m in org_doc.members:
-        if m.email == email:
-            user_found = True
-            continue
-        new_members.append(m)
-        
-    if not user_found:
-        return {"status": "error", "message": "Member not found in dashboard list."}
-        
-    org_doc.members = new_members
-    org_doc.save(ignore_permissions=True)
-    
-    # 2. Clear the organization link on the User profile
-    if frappe.db.exists("User", email):
-        u = frappe.get_doc("User", email)
-        u.organization = None
-        u.enabled = 0 # Safety: disable them if they are removed from org
-        u.save(ignore_permissions=True)
-        
-    frappe.db.commit()
-    return {"status": "success", "message": f"User {email} removed from organization and capacity freed."}
-
 
 
 @frappe.whitelist()
@@ -806,14 +739,17 @@ def handle_registration_approval(doc, method):
         # 3. Insert and save
         new_user.insert(ignore_permissions=True)
         new_user.send_welcome_mail_to_user() # Explicitly trigger welcome email
-        BASE_URL = "https://oracle.nuomics.io"
-        password="user123user"
-        #nuomics_register(BASE_URL, doc.work_email, doc.first_name, password)
-
-
         
         # 4. Add the specific role we just created
         new_user.add_roles("Organization Admin") 
+        
+        # 5. Add the admin themselves to the members child table
+        doc.append("members", {
+            "name1": f"{doc.first_name} {doc.last_name}",
+            "email": doc.work_email,
+            "user_ref": new_user.name,
+            "status": "Approved"
+        })
         
         frappe.db.commit()
         frappe.msgprint(f"Core User account created for {doc.work_email}")
@@ -831,7 +767,7 @@ def get_admin_stats():
     
     # 1. Get all organizations
     orgs = frappe.get_all("User Registration", 
-        fields=["name", "organization_name", "organization_type", "first_name", "last_name", "work_email", "creation"],
+        fields=["name", "organization_name", "organization_type", "first_name", "last_name", "work_email", "creation", "approval_status", "number_of_users"],
         order_by="creation desc"
     )
     
@@ -843,44 +779,95 @@ def get_admin_stats():
         
     return {"status": "success", "organizations": orgs}
 
-
-@frappe.whitelist(allow_guest=True)
-def request_password_reset(email):
-    if not email:
-        frappe.throw(_("Email is required"))
+@frappe.whitelist()
+def get_org_growth_data():
+    validate_super_admin()
     
-    if not frappe.db.exists("User", email):
-        return {
-            "status": "error", 
-            "message": _("This email address is not registered in our system.")
-        }
+    # Get last 6 months of data
+    from datetime import datetime
+    from dateutil.relativedelta import relativedelta
     
-    try:
-        user = frappe.get_doc("User", email)
-        user.reset_password(send_email=True)
-        return {
-            "status": "success",
-            "message": _("Password reset instructions have been sent to your email.")
-        }
-    except Exception as e:
-        frappe.log_error(frappe.get_traceback(), "Password Reset Error")
-        return {
-            "status": "error",
-            "message": _("Failed to send reset email. Please contact support.")
-        }
+    end_date = datetime.now()
+    start_date = end_date - relativedelta(months=5)
+    start_date = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    query = """
+        SELECT 
+            DATE_FORMAT(creation, '%%b %%Y') as month,
+            COUNT(*) as count,
+            DATE_FORMAT(creation, '%%Y-%%m') as month_sort
+        FROM `tabUser Registration`
+        WHERE creation >= %s
+        GROUP BY month_sort
+        ORDER BY month_sort ASC
+    """
+    
+    raw_data = frappe.db.sql(query, (start_date,), as_dict=1)
+    
+    # Fill in missing months with 0
+    labels = []
+    values = []
+    
+    current = start_date
+    while current <= end_date:
+        m_label = current.strftime('%b %Y')
+        m_sort = current.strftime('%Y-%m')
+        
+        labels.append(m_label)
+        
+        # Find if we have data for this month
+        found = next((item['count'] for item in raw_data if item['month_sort'] == m_sort), 0)
+        values.append(found)
+        
+        current += relativedelta(months=1)
+        
+    # 2. Get Plan Distribution
+    plan_data = frappe.db.sql("""
+        SELECT organization_type, count(*) as count 
+        FROM `tabUser Registration` 
+        GROUP BY organization_type
+    """, as_dict=1)
+    
+    plans = {
+        "labels": [p.get("organization_type") or "Unspecified" for p in plan_data],
+        "values": [p.get("count") for p in plan_data]
+    }
+    
+    return {
+        "status": "success",
+        "data": {
+            "labels": labels,
+            "values": values
+        },
+        "plans": plans
+    }
 
+@frappe.whitelist()
+def get_system_alerts():
+    validate_super_admin()
+    alerts = frappe.get_all("System Alert",
+        fields=["name", "alert_type", "message", "user", "creation", "is_read"],
+        filters={"is_read": 0},
+        order_by="creation desc",
+        limit=20
+    )
+    return {"status": "success", "alerts": alerts}
 
+@frappe.whitelist()
+def mark_alert_as_read(alert_id):
+    validate_super_admin()
+    if frappe.db.exists("System Alert", alert_id):
+        frappe.db.set_value("System Alert", alert_id, "is_read", 1)
+        frappe.db.commit()
+    return {"status": "success"}
 
-def nuomics_register(BASE_URL,email,name,password):
-
-    print("\n🔹 Registering user...")
-    res = requests.post(f"{BASE_URL}/auth/register", json={
-        "name": name,
-        "email": email,
-        "password": password
-    })
-
-    return res.text
-
-
+@frappe.whitelist()
+def get_all_users():
+    validate_super_admin()
+    users = frappe.get_all("User",
+        fields=["name", "full_name", "email", "user_type", "creation"],
+        filters={"enabled": 1, "user_type": ["!=", "System User"]},
+        order_by="creation desc"
+    )
+    return {"status": "success", "users": users}
 
