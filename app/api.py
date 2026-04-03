@@ -37,18 +37,36 @@ def sync_custom_fields():
 def get_user_permission_query(user=None):
     if not user: user = frappe.session.user
     
-    # Administrators can see everything
-    if "System Manager" in frappe.get_roles(user):
-        return None
+    try:
+        # Administrators can see everything
+        roles = frappe.get_roles(user)
+        if "System Manager" in roles:
+            return None
+            
+        # Get the organization for the current user
+        org = frappe.db.get_value("User", user, "organization")
         
-    # Get the organization for the current user
-    org = frappe.db.get_value("User", user, "organization")
-    
-    if org:
-        return f"(`tabUser`.organization = '{org}')"
-    
-    # If no reg_id, they can't see any other org users (or maybe just themselves)
-    return "(`tabUser`.name = '{0}')".format(frappe.db.escape(user))
+        if org:
+            return f"(`tabUser`.organization = '{org}')"
+        
+        # If no org, restrict to self
+        return "(`tabUser`.name = '{0}')".format(frappe.db.escape(user))
+    except Exception:
+        # Fallback to only seeing self in case of any issues during login phase
+        return "(`tabUser`.name = '{0}')".format(frappe.db.escape(user))
+
+
+def redirect_after_login(login_manager):
+    user = frappe.session.user
+
+    # Administrator should always go to Desk
+    if user == "Administrator":
+        return
+
+    # Organization Admin redirect
+    if "Organization Admin" in frappe.get_roles(user):
+        frappe.local.response["type"] = "redirect"
+        frappe.local.response["location"] = "/dashboard"
 
 
 
@@ -380,18 +398,38 @@ def payu_failure():
     return
 
 @frappe.whitelist(allow_guest=True)
-def submit_details(first_name, last_name, work_email, organization_name, contact_number, organization_type, payment_status, number_of_users=1):
+def submit_details(first_name, last_name, work_email, organization_name, contact_number, organization_type, payment_status, country_code, number_of_users=1):
     
-    if not all([first_name, last_name, work_email, organization_name, contact_number, organization_type]):
+    if not all([first_name, last_name, work_email, organization_name, contact_number, organization_type, country_code]):
         frappe.throw(_("All main fields are required"))
 
     # Email Validation
     if not frappe.utils.validate_email_address(work_email):
         frappe.throw(_("Invalid email address: {0}").format(work_email))
+
+    # Organization Specific Validations
+    email_lower = work_email.lower()
+    org_name_clean = "".join(filter(str.isalnum, organization_name.lower()))
+    
+    if organization_type == "Educational":
+        if not email_lower.endswith(".edu"):
+            frappe.throw(_("Educational organizations require a .edu email address."))
+    elif organization_type in ["Industrial", "Enterprise"]:
+        domain = email_lower.split("@")[-1].split(".")[0]
+        if org_name_clean not in domain and domain not in org_name_clean:
+            frappe.throw(_("For {0} organizations, the email domain should match the organization name.").format(organization_type))
         
-    # Phone number length validation (Basic)
-    if len("".join(filter(str.isdigit, str(contact_number)))) < 8:
-        frappe.throw(_("Invalid contact number"))
+    # Phone number validation (Country Specific)
+    import re
+    phone_raw = "".join(filter(str.isdigit, str(contact_number)))
+    if country_code in ["+91", "+1"]:
+        if len(phone_raw) != 10:
+            frappe.throw(_("Please enter a valid 10-digit number for {0}.").format(country_code))
+    elif len(phone_raw) < 8 or len(phone_raw) > 15:
+        frappe.throw(_("Invalid contact number length."))
+
+    # Combine for full contact number
+    full_contact_number = f"{country_code} {contact_number}"
 
     if frappe.db.exists("User Registration", {"work_email": work_email}):
         # Handle update if needed, but here we'll stick to error per current logic
@@ -407,7 +445,7 @@ def submit_details(first_name, last_name, work_email, organization_name, contact
             "last_name": last_name,
             "work_email": work_email,
             "organization_name": organization_name,
-            "contact_number": contact_number,
+            "contact_number": full_contact_number,
             "organization_type": organization_type,
             "number_of_users": number_of_users,
             "payment_status": payment_status,
@@ -415,6 +453,27 @@ def submit_details(first_name, last_name, work_email, organization_name, contact
         })
 
         user.insert(ignore_permissions=True)
+
+        # Create a matching Lead doc in the CRM Lead DocType
+        try:
+            lead = frappe.get_doc({
+                "doctype": "CRM Lead",
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": work_email,
+                "mobile_no": full_contact_number,
+                "organization": organization_name,
+                "status": "New",
+                "source": "Website",
+                "custom_no_of_users": number_of_users,
+                "custom_organization_type": organization_type
+            })
+            lead.insert(ignore_permissions=True)
+        except Exception as lead_err:
+            # We don't want to fail the main registration if lead creation fails
+            # but we should log it
+            frappe.log_error(f"Lead Creation Failed: {str(lead_err)}", "Registration Lead Error")
+
         frappe.db.commit()
 
         return {
@@ -437,22 +496,33 @@ def get_user_capacity(registration_id):
     if not frappe.db.exists("User Registration", registration_id):
         return 0
     reg = frappe.get_doc("User Registration", registration_id)
-    # Parse range like "Small Team (2-10)" or "Enterprise (200+)"
+    
+    # Priority 1: Direct Number of Users field
+    if reg.number_of_users:
+        try:
+            return int(reg.number_of_users)
+        except (ValueError, TypeError):
+            pass
+            
+    # Priority 2: Fallback to Plan Range parsing
     if not reg.organization_type:
-        return 5
+        return 5 # Safe Default
+        
+    if reg.organization_type == "Individual":
+        return 1
         
     capacity_str = reg.organization_type.split('(')[-1].replace(')', '')
     if '+' in capacity_str:
-        return 999999
+        return 999999 # Enterprise
     if '-' in capacity_str:
         try:
             return int(capacity_str.split('-')[-1].strip())
-        except:
+        except (ValueError, TypeError):
             return 5
     try:
         return int(capacity_str.strip())
-    except:
-        return 5 # Default
+    except (ValueError, TypeError):
+        return 5 # Balanced Default
 
 @frappe.whitelist()
 def add_org_user(registration_id, name, email):
@@ -513,7 +583,7 @@ def upload_org_users_csv(registration_id, file_url):
     current_count = frappe.db.count("User", {"organization": registration_id, "enabled": 1})
 
     if current_count >= capacity:
-        return {"status": "error", "message": "Capacity reached."}
+        return {"status": "error", "message": f"Organization Capacity reached. You have already utilized your limit of {capacity} users."}
     
     inserted = 0
     skipped = 0
@@ -555,7 +625,11 @@ def upload_org_users_csv(registration_id, file_url):
         
     org_doc.save(ignore_permissions=True)
     frappe.db.commit()
-    return {"status": "success", "message": f"Created {inserted} users. ({skipped} duplicates skipped)."}
+    final_msg = f"Created {inserted} users. ({skipped} duplicates skipped)."
+    if current_count + inserted >= capacity:
+        final_msg = f"Partial Success: Created {inserted} users, but reached your limit of {capacity}. Some rows were skipped."
+        
+    return {"status": "success", "message": final_msg}
 
 
 @frappe.whitelist()
@@ -582,6 +656,40 @@ def upload_csv_base64(registration_id, filename, filedata):
     except Exception as e:
         return {"status": "error", "message": str(e)}
         
+
+@frappe.whitelist()
+def update_member_status(registration_id, email, status):
+    validate_org_access(registration_id)
+    if not registration_id or not email or not status:
+        return {"status": "error", "message": "Missing required information"}
+        
+    # Valid status values: "Approved" or "Rejected"
+    if status not in ["Approved", "Rejected"]:
+        return {"status": "error", "message": "Invalid status value"}
+
+    # 1. Update core user enabled state
+    if frappe.db.exists("User", email):
+        u = frappe.get_doc("User", email)
+        u.enabled = 1 if status == "Approved" else 0
+        u.save(ignore_permissions=True)
+        
+    # 2. Update status in User Registration child table
+    org_doc = frappe.get_doc("User Registration", registration_id)
+    user_found = False
+    for m in org_doc.members:
+        if m.email == email:
+            m.status = status
+            user_found = True
+            break
+            
+    if user_found:
+        org_doc.save(ignore_permissions=True)
+        frappe.db.commit()
+        msg = f"User {email} has been {'enabled and approved' if status == 'Approved' else 'disabled and rejected'}."
+        return {"status": "success", "message": msg}
+    else:
+        return {"status": "error", "message": "Member not found in your organization record."}
+
 
 @frappe.whitelist()
 def get_org_users(registration_id):
@@ -634,3 +742,29 @@ def handle_registration_approval(doc, method):
         
         frappe.db.commit()
         frappe.msgprint(f"Core User account created for {doc.work_email}")
+
+# Helper to validate super admin
+def validate_super_admin():
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Please log in"), frappe.PermissionError)
+    if "System Manager" not in frappe.get_roles() and frappe.session.user != "Administrator":
+        frappe.throw(_("Not authorized - Super Admin only"), frappe.PermissionError)
+
+@frappe.whitelist()
+def get_admin_stats():
+    validate_super_admin()
+    
+    # 1. Get all organizations
+    orgs = frappe.get_all("User Registration", 
+        fields=["name", "organization_name", "organization_type", "first_name", "last_name", "work_email", "creation"],
+        order_by="creation desc"
+    )
+    
+    for org in orgs:
+        # Get active member count
+        org.member_count = frappe.db.count("User", {"organization": org.name, "enabled": 1})
+        # Format some display fields
+        org.admin_name = f"{org.first_name} {org.last_name}"
+        
+    return {"status": "success", "organizations": orgs}
+

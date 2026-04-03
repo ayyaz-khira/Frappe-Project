@@ -1,0 +1,501 @@
+{% extends "templates/web.html" %}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block style %}
+<!-- Custom Premium Aesthetic Admin UI -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+<style>
+    :root {
+        --primary: #6366f1;
+        --primary-hover: #4f46e5;
+        --sidebar-bg: #111827;
+        --main-bg: #0b0f1a;
+        --card-bg: #1f2937;
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --text-primary: #f9fafb;
+        --text-secondary: #9ca3af;
+        --accent-violet: #8b5cf6;
+    }
+
+    [data-theme="light"] {
+        --sidebar-bg: #ffffff;
+        --main-bg: #f9fafb;
+        --card-bg: #ffffff;
+        --glass-border: rgba(0, 0, 0, 0.05);
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+    }
+
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+        background-color: var(--main-bg) !important;
+        color: var(--text-secondary);
+        margin: 0;
+        padding: 0;
+        transition: background-color 0.4s ease, color 0.4s ease;
+        overflow-x: hidden;
+    }
+
+    .mesh-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+        z-index: -1;
+        opacity: 0.8;
+    }
+
+    h1,
+    h2,
+    h3,
+    .font-outfit {
+        font-family: 'Outfit', sans-serif !important;
+    }
+
+    /* Sidebar - Corporate Elite */
+    .sidebar {
+        width: 280px;
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        background: var(--sidebar-bg);
+        border-right: 1px solid var(--glass-border);
+        z-index: 1000;
+        padding: 40px 24px;
+        transition: all 0.3s ease;
+    }
+
+    .main-content {
+        margin-left: 280px;
+        padding: 32px 48px;
+        min-height: 100vh;
+        max-width: 1400px;
+    }
+
+    /* Stat Cards - Balanced Glassmorphism */
+    .stat-card {
+        background: var(--card-bg);
+        border-radius: 20px;
+        border: 1px solid var(--glass-border);
+        padding: 32px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border-color: var(--primary);
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        color: var(--text-secondary);
+        border-radius: 12px;
+        margin-bottom: 8px;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .nav-link:hover {
+        background: rgba(99, 102, 241, 0.05);
+        color: var(--primary);
+    }
+
+    .nav-link.active {
+        background: var(--primary);
+        color: white !important;
+        box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Professional Tables */
+    .table-container {
+        background: var(--card-bg);
+        border-radius: 24px;
+        border: 1px solid var(--glass-border);
+        overflow: hidden;
+        margin-top: 40px;
+    }
+
+    th {
+        padding: 16px 24px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: rgba(0, 0, 0, 0.02);
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    td {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    .org-row {
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .org-row:hover {
+        background: rgba(99, 102, 241, 0.03);
+    }
+
+    /* Modern Badges */
+    .p-badge {
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .badge-indigo {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary);
+    }
+
+    .badge-success {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    /* Theme Switcher */
+    .theme-toggle {
+        padding: 10px;
+        border-radius: 12px;
+        background: var(--glass-border);
+        border: 1px solid var(--glass-border);
+        transition: all 0.2s;
+    }
+
+    .theme-toggle:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .dynamic-text {
+        color: var(--text-primary) !important;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--glass-border);
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--text-secondary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mesh-bg"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+    <div class="mb-10 px-2">
+        <div class="flex items-center gap-3">
+            <div
+                class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
+                <span class="text-white font-bold text-xl">Nμ</span>
+            </div>
+            <span class="logo-text !text-2xl tracking-tighter dynamic-text">Omics</span>
+        </div>
+    </div>
+
+    <nav class="space-y-1">
+        <a href="/admin-dashboard" class="nav-link active">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
+                </path>
+            </svg>
+            Dashboard
+        </a>
+        <a href="/app" class="nav-link">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-1.343 3-3s-1.343-3-3-3m0 6c-1.657 0-3-1.343-3-3s1.343-3 3-3m0 0V3m0 18V3">
+                </path>
+            </svg>
+            Explorer
+        </a>
+    </nav>
+
+    <div class="absolute bottom-10 left-0 w-full px-6">
+        <button onclick="toggleTheme()"
+            class="theme-toggle w-full flex items-center justify-center gap-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <svg id="moon-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+            <svg id="sun-icon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                </path>
+            </svg>
+            <span>Appearance</span>
+        </button>
+    </div>
+</aside>
+
+<!-- Content -->
+<main class="main-content">
+    <div class="flex justify-between items-end mb-8">
+        <div>
+            <h1 class="text-3xl font-bold dynamic-text tracking-tight mb-2">Command Center</h1>
+            <div class="flex items-center gap-2">
+            </div>
+        </div>
+        <div class="flex items-center gap-4 bg-transparent p-2">
+            <div class="text-right">
+                <p class="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-0.5">System Administrator</p>
+                <p class="font-bold dynamic-text">Super Admin</p>
+            </div>
+            <div
+                class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-bold text-white shadow-sm border border-white/5">
+                SA</div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="stat-card">
+            <div class="flex justify-between items-center mb-4">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Organizations</p>
+                <div class="p-2 bg-indigo-500/10 rounded-lg text-indigo-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                        </path>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-4xl font-bold dynamic-text" id="total-orgs">0</h2>
+        </div>
+        <div class="stat-card">
+            <div class="flex justify-between items-center mb-4">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Members</p>
+                <div class="p-2 bg-violet-500/10 rounded-lg text-violet-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                        </path>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-4xl font-bold dynamic-text" id="total-managed">0</h2>
+        </div>
+    </div>
+
+    <!-- Master Table -->
+    <div class="table-container shadow-2xl">
+        <div class="p-8 border-b border-slate-700/10 flex justify-between items-center">
+            <h3 class="text-xl font-bold dynamic-text">Ecosystem Directory</h3>
+            <button onclick="loadAdminStats()"
+                class="p-3 bg-slate-500/5 rounded-xl hover:bg-slate-500/10 transition-all group">
+                <svg class="w-5 h-5 text-indigo-500 group-hover:rotate-180 transition-transform duration-500"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="overflow-x-auto min-h-[400px]">
+            <table class="w-full">
+                <thead>
+                    <tr>
+                        <th class="pl-10">Organization Name</th>
+                        <th>Organization Type</th>
+                        <th>Admin</th>
+                        <th>Active Members</th>
+                        <th class="text-right pr-10">Onboarded</th>
+                    </tr>
+                </thead>
+                <tbody id="org-tbody">
+                    <!-- Row injection -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block script %}
+<script>
+    const savedTheme = localStorage.getItem('nu_admin_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
+    function initDashboard() {
+        // We wait for both frappe object AND the CSRF token to be ready
+        // to avoid "Invalid Request / CSRF" errors on page load
+        if (typeof frappe !== 'undefined' && frappe.call && frappe.csrf_token) {
+            loadAdminStats();
+        } else {
+            setTimeout(initDashboard, 200);
+        }
+    }
+
+    // Start initialization with a small delay for the framework browser sync
+    setTimeout(initDashboard, 300);
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const targetTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', targetTheme);
+        localStorage.setItem('nu_admin_theme', targetTheme);
+        updateThemeIcons(targetTheme);
+    }
+
+    function updateThemeIcons(theme) {
+        const moon = document.getElementById('moon-icon');
+        const sun = document.getElementById('sun-icon');
+        if (!moon || !sun) return;
+        if (theme === 'light') { moon.classList.add('hidden'); sun.classList.remove('hidden'); }
+        else { sun.classList.add('hidden'); moon.classList.remove('hidden'); }
+    }
+
+    // Initial icon update
+    document.addEventListener('DOMContentLoaded', () => updateThemeIcons(savedTheme));
+
+    async function loadAdminStats() {
+        // Prevent double loading if already in progress or has data
+        const tbody = document.getElementById('org-tbody');
+        if (tbody.getAttribute('data-loading') === 'true') return;
+
+        const btn = document.querySelector('button[onclick="loadAdminStats()"] svg');
+        if (btn) btn.classList.add('animate-spin');
+
+        if (tbody.innerHTML.trim() === '' || tbody.innerHTML.includes('Scanning')) {
+            tbody.innerHTML = '<tr><td colspan="5" class="py-20 text-center text-slate-500 italic">Scanning Ecosystem...</td></tr>';
+        }
+
+        tbody.setAttribute('data-loading', 'true');
+
+        frappe.call({
+            method: 'app.api.get_admin_stats',
+            callback: function (r) {
+                tbody.setAttribute('data-loading', 'false');
+                if (btn) btn.classList.remove('animate-spin');
+                if (r.message && r.message.status === 'success') {
+                    renderOrgs(r.message.organizations);
+                } else if (r.exc) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="py-20 text-center text-red-500 italic">Telemetry Access Denied</td></tr>';
+                }
+            }
+        });
+    }
+
+    function renderOrgs(orgs) {
+        const tbody = document.getElementById('org-tbody');
+        tbody.innerHTML = '';
+        let uCount = 0;
+        document.getElementById('total-orgs').innerText = orgs.length;
+
+        orgs.forEach(o => {
+            uCount += o.member_count;
+            tbody.innerHTML += `
+                <tr class="org-row group" onclick="toggleMembers('${o.name}')">
+                    <td class="pl-10">
+                        <p class="font-semibold dynamic-text text-sm group-hover:text-indigo-500 transition-colors">${o.organization_name}</p>
+                    </td>
+                    <td><span class="p-badge badge-indigo text-[10px]">${o.organization_type}</span></td>
+                    <td>
+                        <p class="font-medium text-sm dynamic-text">${o.admin_name}</p>
+                        <p class="text-[11px] text-slate-500">${o.work_email}</p>
+                    </td>
+                    <td>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold dynamic-text text-sm">${o.member_count}</span>
+                            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-40">Users</span>
+                        </div>
+                    </td>
+                    <td class="text-right pr-10">
+                        <p class="font-semibold dynamic-text text-sm">${new Date(o.creation).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                        <p class="text-[10px] text-slate-500 font-medium">${new Date(o.creation).getFullYear()}</p>
+                    </td>
+                </tr>
+                <tr id="sub-row-${o.name}" class="hidden inspect-panel">
+                    <td colspan="5" class="p-0 bg-slate-500/5">
+                        <div class="p-8 border-y border-indigo-500/10">
+                            <div class="flex justify-between items-center mb-6">
+                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-indigo-500 flex items-center gap-3">
+                                    <span class="w-6 h-[2px] bg-indigo-500/40"></span>
+                                    Organization Directory
+                                </h4>
+                                <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                    Verified Personnel
+                                </div>
+                            </div>
+                            <div id="members-list-${o.name}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- Members -->
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        document.getElementById('total-managed').innerText = uCount;
+    }
+
+    async function toggleMembers(orgId) {
+        const subrow = document.getElementById(`sub-row-${orgId}`);
+        if (!subrow.classList.contains('hidden')) { subrow.classList.add('hidden'); return; }
+
+        document.querySelectorAll('.inspect-panel').forEach(r => r.classList.add('hidden'));
+        subrow.classList.remove('hidden');
+
+        frappe.call({
+            method: 'app.api.get_org_users',
+            args: { registration_id: orgId },
+            callback: function (r) {
+                const list = document.getElementById(`members-list-${orgId}`);
+                if (r.message && r.message.status === 'success') {
+                    const users = r.message.users;
+                    list.innerHTML = users.length === 0 ? '<div class="col-span-3 py-10 text-center text-xs italic text-slate-500">No members registered yet.</div>' :
+                        users.map(u => `
+                            <div class="p-4 bg-white/5 border border-white/5 rounded-xl transition-all hover:border-indigo-500/30">
+                                <p class="font-bold text-sm dynamic-text">${u.name}</p>
+                                <p class="text-[11px] text-slate-500 font-medium truncate mb-3">${u.email}</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="p-badge ${u.status === 'Approved' ? 'badge-success' : 'badge-indigo'} !text-[9px] uppercase tracking-wide">${u.status}</span>
+                                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-tighter opacity-60">${new Date(u.creation).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                        `).join('');
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

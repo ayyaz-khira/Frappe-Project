@@ -68,12 +68,10 @@ fixtures = [
 # ----------
 
 # application home page (will override Website Settings)
-# home_page = "login"
+# home_page = "Wlogin"
 
 # website user home page (by Role)
-role_home_page = {
-	"Organization Admin": "dashboard"
-}
+
 
 # Generators
 # ----------
@@ -158,7 +156,9 @@ doc_events = {
 
 
 
-# Scheduled Tasks
+on_login = "app.api.redirect_after_login"
+ 
+ # Scheduled Tasks
 # ---------------
 
 # scheduler_events = {

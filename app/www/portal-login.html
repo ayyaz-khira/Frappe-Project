@@ -1,7 +1,7 @@
 {% extends "templates/web.html" %}
 
 {% block style %}
-<!-- Tailwind CSS and Modern Aesthetic Styles -->
+<!-- Tailwind CSS and Modern Light Aesthetic Styles -->
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -9,101 +9,133 @@
 <style>
     body {
         font-family: 'Outfit', sans-serif !important;
-        background-color: #0c0e14 !important;
-        color: #f8fafc;
-        overflow-x: hidden;
+        background-color: #f9fafb !important;
+        color: #1a202c;
         margin: 0;
         padding: 0;
+        overflow-x: hidden;
     }
 
-    .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        border-radius: 24px;
-        transition: all 0.3s ease;
-    }
-
-    .input-field {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: white;
-        transition: all 0.2s ease;
-    }
-
-    .input-field:focus {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: #6366f1;
-        outline: none;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
-    }
-
-    .submit-btn {
-        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
-    }
-
-    .submit-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
-        filter: brightness(1.1);
-    }
-
-    .bg-gradient-mesh {
+    .bg-light-mesh {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: -2;
-        background: radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-            radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.08) 0%, transparent 50%);
+        z-index: -1;
+        background-color: #f9fafb;
+        background-image:
+            radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.05) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+            radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.05) 0px, transparent 50%);
+    }
+
+    .login-card {
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+        border-radius: 24px;
+        transition: transform 0.3s ease;
+    }
+
+    .input-field {
+        background: #fdfdfd;
+        border: 1.5px solid #e2e8f0;
+        color: #1a202c;
+        transition: all 0.2s ease;
+    }
+
+    .input-field:focus {
+        border-color: #6366f1;
+        background: #fff;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .submit-btn {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.4);
+        filter: brightness(1.05);
+    }
+
+    /* Universal Message Overrides to match Light Theme */
+    .frappe-message-box,
+    .modal-content {
+        background-color: #ffffff !important;
+        color: #1a202c !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 16px !important;
+    }
+
+    .frappe-message-box *,
+    .modal-content * {
+        color: #1a202c !important;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="bg-gradient-mesh"></div>
+<div class="bg-light-mesh"></div>
 
-<main class="w-full min-h-screen flex items-center justify-center px-4 py-12">
+<main class="w-full min-h-screen flex flex-col items-center justify-center px-4 py-20">
     <div class="w-full max-w-md">
-        <div class="text-center mb-10">
-            <h1 class="text-4xl font-bold mb-3 tracking-tight">Portal Login</h1>
-            <p class="text-slate-400 font-medium">Organization Management Dashboard</p>
+        <!-- Logo/Branding -->
+        <div class="text-center flex flex-col items-center mb-10">
+            <div class="flex items-center mb-8">
+                <!-- Square Box for Nμ -->
+                <div class="flex items-center justify-center border-[1.5px] border-slate-900 w-[42px] h-[42px]">
+                    <span
+                        class="font-sans text-[24px] font-medium leading-none tracking-tight flex items-baseline text-slate-900 uppercase">
+                        N<span class="text-[18px] ml-[0.5px] lowercase">μ</span>
+                    </span>
+                </div>
+                <!-- Omics text outside -->
+                <span class="font-sans text-[24px] font-normal tracking-tight ml-2.5 pr-2 text-slate-900">
+                    Omics
+                </span>
+            </div>
+            <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
+            <p class="text-slate-500 font-medium mt-2">NuOmics Organization Portal</p>
         </div>
 
-        <div class="glass-card p-10">
+        <!-- Login Card -->
+        <div class="login-card p-10">
             <form id="login-form" class="space-y-6">
                 <div>
-                    <label
-                        class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Administrator
-                        Email</label>
-                    <input type="email" id="email" class="input-field w-full rounded-2xl px-5 py-4 font-medium"
-                        placeholder="admin@acme.corp" required autocomplete="username">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Email
+                        Address</label>
+                    <input type="email" id="email" class="input-field w-full rounded-xl px-4 py-3.5 font-medium"
+                        placeholder="admin@example.com" required autocomplete="email">
                 </div>
+
                 <div>
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-2 block">Secure
-                        Password</label>
-                    <input type="password" id="password" class="input-field w-full rounded-2xl px-5 py-4 font-medium"
+                    <div class="flex justify-between items-center mb-2 px-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest block">Password</label>
+                        <!-- <a href="/login#forgot"
+                            class="text-[11px] font-bold text-indigo-500 hover:text-indigo-600">Forgot?</a> -->
+                    </div>
+                    <input type="password" id="password" class="input-field w-full rounded-xl px-4 py-3.5 font-medium"
                         placeholder="••••••••" required autocomplete="current-password">
                 </div>
 
                 <div class="pt-2">
                     <button type="submit" id="login-btn"
-                        class="submit-btn w-full py-4 rounded-2xl font-bold text-lg tracking-wide uppercase transition-all">
-                        Sign In
+                        class="submit-btn w-full py-4 rounded-xl font-bold text-base tracking-wide uppercase transition-all">
+                        Sign In to Portal
                     </button>
                 </div>
             </form>
         </div>
 
-        <div class="mt-8 text-center text-slate-500 text-sm">
-            <p>New organization? <a href="/contact-us" class="text-indigo-400 font-semibold hover:underline">Apply for
-                    registration</a></p>
-        </div>
+
     </div>
 </main>
 {% endblock %}
@@ -117,28 +149,27 @@
         const password = document.getElementById('password').value;
 
         frappe.call({
-            method: 'login', // Calls the framework's native login method
+            method: 'login',
             args: {
                 usr: email,
                 pwd: password
             },
-            btn: $('#login-btn'), // Automatically handles loading state
+            btn: $('#login-btn'),
             callback: function (r) {
                 if (r.message === "Logged In" || r.home_page) {
                     frappe.show_alert({
-                        message: __('Authentication successful. Accessing dashboard...'),
+                        message: __('Welcome back! Authenticating...'),
                         indicator: 'green'
                     });
 
-                    // Force the redirect to /dashboard immediately
-                    // This bypasses Frappe's default "Go to Desk" logic
+                    // Redirect to dashboard
                     window.location.href = r.home_page || '/dashboard';
                 }
                 else {
                     frappe.msgprint({
-                        title: __('Login Failed'),
+                        title: __('Access Denied'),
                         indicator: 'red',
-                        message: r.message || __('Invalid email or password.')
+                        message: r.message || __('The email or password entered is incorrect.')
                     });
                 }
             }
