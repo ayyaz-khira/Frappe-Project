@@ -269,11 +269,16 @@
 {% endblock %}
 
 {% block content %}
-{% set registration_name = frappe.form_dict.registration or frappe.db.get_value("User", frappe.session.user,
-"organization") %}
+{% set registration_name = frappe.form_dict.registration or frappe.db.get_value("User", frappe.session.user, "organization") %}
+
+{# If System Manager lands here without a registration, send them to Master Command Center #}
+{% if not registration_name and "System Manager" in frappe.get_roles() %}
+    <script>window.location.href = "/admin-dashboard";</script>
+{% endif %}
+
 {% set reg = None %}
 {% if registration_name %}
-{% set reg = frappe.get_doc("User Registration", registration_name) %}
+    {% set reg = frappe.get_doc("User Registration", registration_name) %}
 {% endif %}
 
 <!-- Sidebar -->
@@ -442,8 +447,12 @@
                         class="hidden bg-indigo-500/10 p-3 rounded-lg border border-indigo-500/20 flex justify-between items-center">
                         <span id="csv_filename"
                             class="text-[10px] font-bold text-indigo-300 truncate max-w-[100px]">file.csv</span>
-                        <button onclick="uploadCSV()"
-                            class="text-[10px] font-bold text-white bg-indigo-600 px-3 py-1 rounded">Process</button>
+                        <div class="flex gap-2">
+                            <button onclick="uploadCSV()"
+                                class="text-[10px] font-bold text-white bg-indigo-600 px-3 py-1 rounded hover:bg-indigo-700 transition-colors">Process</button>
+                            <button onclick="clearCSV()" 
+                                class="text-[10px] font-bold text-slate-400 bg-slate-500/10 px-2 py-1 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors">X</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -472,9 +481,13 @@
 {% block script %}
 <script>
     // Immediate Redirect if not logged in (Wait for Frappe to be ready)
+    if (typeof frappe !== 'undefined' && frappe.session.user === "Guest") {
+        window.location.href = "/login";
+    }
+
     frappe.ready(() => {
         if (frappe.session.user === "Guest") {
-            window.location.href = "/portal-login";
+            window.location.href = "/login";
         }
     });
 
@@ -512,7 +525,7 @@
         frappe.call({
             method: "logout",
             callback: function (r) {
-                window.location.href = "/portal-login";
+                window.location.href = "/login";
             }
         });
     }
@@ -672,6 +685,11 @@
 
     const csvInput = document.getElementById('csv_input');
     if (csvInput) {
+        function clearCSV() {
+            csvInput.value = '';
+            document.getElementById('csv_info').classList.add('hidden');
+        }
+
         csvInput.onchange = e => {
             const file = e.target.files[0];
             if (file) {
@@ -696,10 +714,18 @@
                     filedata: e.target.result
                 },
                 callback: function (r) {
-                    if (r.message && r.message.status === 'success') {
-                        frappe.show_alert({ message: r.message.message, indicator: 'green' });
-                        document.getElementById('csv_info').classList.add('hidden');
-                        loadMembers();
+                    if (r.message) {
+                        if (r.message.status === 'success') {
+                            frappe.show_alert({ message: r.message.message, indicator: 'green' });
+                            document.getElementById('csv_info').classList.add('hidden');
+                            loadMembers();
+                        } else {
+                            frappe.msgprint({
+                                title: 'Upload Failed',
+                                indicator: 'red',
+                                message: r.message.message || "An unknown error occurred during import."
+                            });
+                        }
                     }
                 }
             });

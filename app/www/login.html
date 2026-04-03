@@ -1,0 +1,270 @@
+{% extends "templates/web.html" %}
+
+{% block style %}
+<!-- Tailwind CSS and Modern Light Aesthetic Styles -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    body {
+        font-family: 'Outfit', sans-serif !important;
+        background-color: #f9fafb !important;
+        color: #1a202c;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+    }
+
+    .bg-light-mesh {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        background-color: #f9fafb;
+        background-image:
+            radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.05) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+            radial-gradient(at 0% 100%, rgba(168, 85, 247, 0.05) 0px, transparent 50%);
+    }
+
+    .login-card {
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08);
+        border-radius: 24px;
+        transition: transform 0.3s ease;
+    }
+
+    .input-field {
+        background: #fdfdfd;
+        border: 1.5px solid #e2e8f0;
+        color: #1a202c;
+        transition: all 0.2s ease;
+    }
+
+    .input-field:focus {
+        border-color: #6366f1;
+        background: #fff;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    .submit-btn {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.4);
+        filter: brightness(1.05);
+    }
+
+    /* Universal Message Overrides to match Light Theme */
+    .frappe-message-box,
+    .modal-content {
+        background-color: #ffffff !important;
+        color: #1a202c !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 16px !important;
+    }
+
+    .frappe-message-box *,
+    .modal-content * {
+        color: #1a202c !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-light-mesh"></div>
+
+<main class="w-full min-h-screen flex flex-col items-center justify-center px-4 py-20">
+    <div class="w-full max-w-md">
+        <!-- Logo/Branding -->
+        <div class="text-center flex flex-col items-center mb-10">
+            <div class="flex items-center mb-8">
+                <!-- Square Box for Nμ -->
+                <div class="flex items-center justify-center border-[1.5px] border-slate-900 w-[42px] h-[42px]">
+                    <span
+                        class="font-sans text-[24px] font-medium leading-none tracking-tight flex items-baseline text-slate-900 uppercase">
+                        N<span class="text-[18px] ml-[0.5px] lowercase">μ</span>
+                    </span>
+                </div>
+                <!-- Omics text outside -->
+                <span class="font-sans text-[24px] font-normal tracking-tight ml-2.5 pr-2 text-slate-900">
+                    Omics
+                </span>
+            </div>
+            <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
+            <p class="text-slate-500 font-medium mt-2">NuOmics Organization Portal</p>
+        </div>
+
+        <!-- Login/Reset Card -->
+        <div class="login-card p-10 overflow-hidden relative">
+            <!-- Login View -->
+            <div id="login-view">
+                <form id="login-form" class="space-y-6">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Email
+                            Address</label>
+                        <input type="email" id="email" class="input-field w-full rounded-xl px-4 py-3.5 font-medium"
+                            placeholder="admin@example.com" required autocomplete="email">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2">Password</label>
+                        <div class="relative">
+                            <input type="password" name="password" id="password" required
+                                class="input-field w-full rounded-xl pl-4 pr-12 py-3.5 font-medium"
+                                placeholder="••••••••">
+                            <button type="button" onclick="togglePasswordVisibility()" 
+                                class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-indigo-500 transition-colors focus:outline-none">
+                                <svg id="eye-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex justify-end mt-2 px-1">
+                            <button type="button" onclick="showView('forgot')"
+                                class="text-[11px] font-bold text-indigo-500 hover:text-indigo-600 transition-colors">Forgot Password?</button>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" id="login-btn"
+                            class="submit-btn w-full py-4 rounded-xl font-bold text-base tracking-wide uppercase transition-all">
+                            Sign In to Portal
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Forgot View -->
+            <div id="forgot-view" style="display: none;">
+                <div class="mb-8">
+                    <h2 class="text-xl font-bold text-slate-900 mb-2">Reset Password</h2>
+                    <p class="text-xs text-slate-500 font-medium leading-relaxed">Enter your email and we'll send reset instructions.</p>
+                </div>
+                <form id="forgot-form" class="space-y-6">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Email Address</label>
+                        <input type="email" id="reset-email" class="input-field w-full rounded-xl px-4 py-3.5 font-medium"
+                            placeholder="your@email.com" required>
+                    </div>
+                    <div class="pt-2">
+                        <button type="submit" id="reset-btn"
+                            class="submit-btn w-full py-4 rounded-xl font-bold text-base tracking-wide uppercase transition-all">
+                            Send Reset Link
+                        </button>
+                        <button type="button" onclick="showView('login')" 
+                            class="w-full mt-4 text-[11px] font-bold text-slate-400 hover:text-indigo-500 uppercase tracking-widest transition-colors text-center">
+                            Back to Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Success View -->
+            <div id="success-view" style="display: none;" class="text-center py-4">
+                <div class="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-8 h-8 text-green-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h2 class="text-xl font-bold text-slate-900 mb-3">Email Sent!</h2>
+                <p class="text-sm text-slate-500 leading-relaxed max-w-xs mx-auto mb-8">
+                    Instructions to reset your password have been sent to your email. Please check your inbox and spam folder.
+                </p>
+                <button type="button" onclick="showView('login')" 
+                    class="submit-btn w-full py-4 rounded-xl font-bold text-base tracking-wide uppercase transition-all">
+                    Return to Login
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block script %}
+<script>
+    // Robust View Toggle
+    function showView(target) {
+        const login = document.getElementById('login-view');
+        const forgot = document.getElementById('forgot-view');
+        const success = document.getElementById('success-view');
+        
+        login.style.display = 'none';
+        forgot.style.display = 'none';
+        success.style.display = 'none';
+
+        if (target === 'forgot') {
+            forgot.style.display = 'block';
+        } else if (target === 'success') {
+            success.style.display = 'block';
+        } else {
+            login.style.display = 'block';
+        }
+    }
+
+    // Toggle Password Visibility
+    function togglePasswordVisibility() {
+        const pwdInput = document.getElementById('password');
+        const eyeIcon = document.getElementById('eye-icon');
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            eyeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />`;
+        } else {
+            pwdInput.type = 'password';
+            eyeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>`;
+        }
+    }
+
+    // Login Form Handler
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        frappe.call({
+            method: 'login',
+            args: { usr: email, pwd: password },
+            btn: $('#login-btn'),
+            callback: function (r) {
+                if (r.message === "Logged In" || r.home_page) {
+                    frappe.show_alert({ message: __('Welcome back! Authenticating...'), indicator: 'green' });
+                    window.location.href = r.home_page || '/dashboard';
+                } else {
+                    frappe.msgprint({ title: __('Access Denied'), indicator: 'red', message: r.message || __('The email or password entered is incorrect.') });
+                }
+            }
+        });
+    });
+
+    // Forgot Password Handler
+    document.getElementById('forgot-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const email = document.getElementById('reset-email').value;
+
+        frappe.call({
+            method: 'app.api.request_password_reset',
+            args: { email: email },
+            btn: $('#reset-btn'),
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    showView('success');
+                } else {
+                    frappe.msgprint({ title: __('Reset Failed'), message: r.message ? r.message.message : "Error connecting to server", indicator: 'red' });
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

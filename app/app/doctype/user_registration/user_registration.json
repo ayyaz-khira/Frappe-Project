@@ -104,6 +104,12 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "email": 1,
+   "read": 1,
+   "role": "Organization Admin",
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

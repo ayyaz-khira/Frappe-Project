@@ -155,6 +155,15 @@ doc_events = {
 
 
 
+website_route_rules=[
+
+    {
+        "from_route":"/home","to_route":"dashboard"
+    }
+]
+
+
+
 
 on_login = "app.api.redirect_after_login"
  

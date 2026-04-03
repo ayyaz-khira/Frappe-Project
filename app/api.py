@@ -9,12 +9,15 @@ def validate_org_access(registration_id):
         frappe.throw(_("Please log in to access this information"), frappe.PermissionError)
         
     # Super Admin / System Manager bypass
-    if "System Manager" in frappe.get_roles():
+    roles = frappe.get_roles()
+    if "System Manager" in roles:
         return True
         
-    # Check if the user is linked to this specific organization
+    # Exact check for the linked organization
     user_org = frappe.db.get_value("User", frappe.session.user, "organization")
-    if user_org != registration_id:
+    
+    # Robust comparison (handles whitespace or formatting issues)
+    if not user_org or str(user_org).strip() != str(registration_id).strip():
         frappe.throw(_("You are not authorized to manage this organization"), frappe.PermissionError)
     
     return True
@@ -59,14 +62,17 @@ def get_user_permission_query(user=None):
 def redirect_after_login(login_manager):
     user = frappe.session.user
 
-    # Administrator should always go to Desk
-    if user == "Administrator":
+    # Priority 1: Administrator / System Manager should go to Master Command Center
+    if "System Manager" in frappe.get_roles(user):
+        frappe.local.response["type"] = "redirect"
+        frappe.local.response["location"] = "/admin-dashboard"
         return
 
-    # Organization Admin redirect
+    # Priority 2: Organization Admin redirect (Take precedence over helpdesk/etc)
     if "Organization Admin" in frappe.get_roles(user):
         frappe.local.response["type"] = "redirect"
         frappe.local.response["location"] = "/dashboard"
+        return
 
 
 
@@ -572,35 +578,60 @@ def add_org_user(registration_id, name, email):
 @frappe.whitelist()
 def upload_org_users_csv(registration_id, file_url):
     validate_org_access(registration_id)
-    # Correctly resolve the absolute path for public/private files
+    
+    # Resolve the absolute path
     if file_url.startswith("/files/"):
         file_path = frappe.get_site_path("public", file_url.lstrip("/"))
     elif file_url.startswith("/private/files/"):
         file_path = frappe.get_site_path(file_url.lstrip("/"))
     else:
         file_path = frappe.get_site_path(file_url.lstrip("/"))
+    
     capacity = get_user_capacity(registration_id)
-    current_count = frappe.db.count("User", {"organization": registration_id, "enabled": 1})
+    # Count ALL members (both enabled and pending) against capacity for bulk import
+    current_count = frappe.db.count("User", {"organization": registration_id})
+
+    # Count ONLY members listed in the organization's directory
+    org_doc = frappe.get_doc("User Registration", registration_id)
+    current_count = len(org_doc.members)
 
     if current_count >= capacity:
         return {"status": "error", "message": f"Organization Capacity reached. You have already utilized your limit of {capacity} users."}
     
     inserted = 0
-    skipped = 0
-    org_doc = frappe.get_doc("User Registration", registration_id)
+    duplicates = 0
+    limit_skipped = 0
     
-    with open(file_path, newline='') as csvfile:
+    # Use utf-8-sig to handle BOM from Excel
+    with open(file_path, mode='r', encoding='utf-8-sig', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
+        
+        # Flexibly find headers
+        if not reader.fieldnames:
+             return {"status": "error", "message": "CSV file is empty or unreadable"}
+
+        headers = {k.lower().strip(): k for k in reader.fieldnames}
+        email_key = headers.get('email') or headers.get('work email') or headers.get('email address')
+        name_key = headers.get('name') or headers.get('full name') or headers.get('first name')
+
+        if not email_key:
+             return {"status": "error", "message": "Could not find 'email' header in CSV"}
+
         for row in reader:
-            email = row.get('email', '').strip()
-            name = row.get('name', 'N/A')
+            email = row.get(email_key, '').strip()
+            name = row.get(name_key or '', 'N/A').strip()
             
-            if not email or frappe.db.exists("User", email):
-                skipped += 1
+            if not email:
+                continue
+
+            if frappe.db.exists("User", email):
+                duplicates += 1
                 continue
             
+            # Check capacity inside loop
             if current_count + inserted >= capacity:
-                break
+                limit_skipped += 1
+                continue
             
             new_user = frappe.get_doc({
                 "doctype": "User",
@@ -609,11 +640,11 @@ def upload_org_users_csv(registration_id, file_url):
                 "send_welcome_email": 0,
                 "enabled": 0,
                 "user_type": "Website User",
-                "organization": registration_id # ENSURE ISOLATION
+                "organization": registration_id
             })
             new_user.insert(ignore_permissions=True)
             
-            # Append to the child table
+            # Append to the child table in the registration record
             org_doc.append("members", {
                 "name1": name,
                 "email": email,
@@ -625,9 +656,13 @@ def upload_org_users_csv(registration_id, file_url):
         
     org_doc.save(ignore_permissions=True)
     frappe.db.commit()
-    final_msg = f"Created {inserted} users. ({skipped} duplicates skipped)."
-    if current_count + inserted >= capacity:
-        final_msg = f"Partial Success: Created {inserted} users, but reached your limit of {capacity}. Some rows were skipped."
+    
+    # Construct a detailed summary message
+    final_msg = f"Imported {inserted} users."
+    if duplicates > 0:
+        final_msg += f" {duplicates} duplicates ignored."
+    if limit_skipped > 0:
+        final_msg += f" {limit_skipped} rows skipped (capacity of {capacity} reached)."
         
     return {"status": "success", "message": final_msg}
 
@@ -689,6 +724,38 @@ def update_member_status(registration_id, email, status):
         return {"status": "success", "message": msg}
     else:
         return {"status": "error", "message": "Member not found in your organization record."}
+
+@frappe.whitelist()
+def remove_org_user(registration_id, email):
+    validate_org_access(registration_id)
+    if not registration_id or not email:
+        return {"status": "error", "message": "Missing required information"}
+        
+    # 1. Disconnect user from organization record
+    org_doc = frappe.get_doc("User Registration", registration_id)
+    new_members = []
+    user_found = False
+    for m in org_doc.members:
+        if m.email == email:
+            user_found = True
+            continue
+        new_members.append(m)
+        
+    if not user_found:
+        return {"status": "error", "message": "Member not found in dashboard list."}
+        
+    org_doc.members = new_members
+    org_doc.save(ignore_permissions=True)
+    
+    # 2. Clear the organization link on the User profile
+    if frappe.db.exists("User", email):
+        u = frappe.get_doc("User", email)
+        u.organization = None
+        u.enabled = 0 # Safety: disable them if they are removed from org
+        u.save(ignore_permissions=True)
+        
+    frappe.db.commit()
+    return {"status": "success", "message": f"User {email} removed from organization and capacity freed."}
 
 
 @frappe.whitelist()
@@ -767,4 +834,31 @@ def get_admin_stats():
         org.admin_name = f"{org.first_name} {org.last_name}"
         
     return {"status": "success", "organizations": orgs}
+
+
+@frappe.whitelist(allow_guest=True)
+def request_password_reset(email):
+    if not email:
+        frappe.throw(_("Email is required"))
+    
+    if not frappe.db.exists("User", email):
+        # We return a generic success message to prevent email enumeration
+        return {
+            "status": "success", 
+            "message": _("If this email is registered, you will receive a reset link shortly.")
+        }
+    
+    try:
+        user = frappe.get_doc("User", email)
+        user.reset_password(send_email=True)
+        return {
+            "status": "success",
+            "message": _("Password reset instructions have been sent to your email.")
+        }
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Password Reset Error")
+        return {
+            "status": "error",
+            "message": _("Failed to send reset email. Please contact support.")
+        }
 
