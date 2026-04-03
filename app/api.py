@@ -3,6 +3,11 @@ import csv
 import base64
 from frappe import _
 
+import requests
+
+
+import random
+
 # Helper to validate if the current user has access to a specific organization registration
 def validate_org_access(registration_id):
     if frappe.session.user == "Guest":
@@ -60,19 +65,24 @@ def get_user_permission_query(user=None):
 
 
 def redirect_after_login(login_manager):
-    user = frappe.session.user
-
-    # Priority 1: Administrator / System Manager should go to Master Command Center
-    if "System Manager" in frappe.get_roles(user):
-        frappe.local.response["type"] = "redirect"
-        frappe.local.response["location"] = "/admin-dashboard"
+    user = login_manager.user
+    roles = frappe.get_roles(user)
+    
+    # Debug print
+    print(f"-------------------- Login Hook Triggered -----------------------")
+    print(f"User: {user} | Roles: {roles}")
+    frappe.log_error(title="Login Hook Debug", message=f"User: {user} | Roles: {roles}")
+    
+    # Priority 1: Administrator / System Manager / Organization Admin should go to Dashboard
+    if "System Manager" in roles or "Organization Admin" in roles:
+        # Use the official Frappe way to set a redirect that survives LoginManager.set_user_info
+        frappe.cache.hset("redirect_after_login", user, "/dashboard")
+        
+        # Also set it in response for custom login handlers that might not look at cache
+        frappe.local.response["redirect_to"] = "/dashboard"
         return
 
-    # Priority 2: Organization Admin redirect (Take precedence over helpdesk/etc)
-    if "Organization Admin" in frappe.get_roles(user):
-        frappe.local.response["type"] = "redirect"
-        frappe.local.response["location"] = "/dashboard"
-        return
+
 
 
 
@@ -758,6 +768,7 @@ def remove_org_user(registration_id, email):
     return {"status": "success", "message": f"User {email} removed from organization and capacity freed."}
 
 
+
 @frappe.whitelist()
 def get_org_users(registration_id):
     validate_org_access(registration_id)
@@ -795,17 +806,14 @@ def handle_registration_approval(doc, method):
         # 3. Insert and save
         new_user.insert(ignore_permissions=True)
         new_user.send_welcome_mail_to_user() # Explicitly trigger welcome email
+        BASE_URL = "https://oracle.nuomics.io"
+        password="user123user"
+        #nuomics_register(BASE_URL, doc.work_email, doc.first_name, password)
+
+
         
         # 4. Add the specific role we just created
         new_user.add_roles("Organization Admin") 
-        
-        # 5. Add the admin themselves to the members child table
-        doc.append("members", {
-            "name1": f"{doc.first_name} {doc.last_name}",
-            "email": doc.work_email,
-            "user_ref": new_user.name,
-            "status": "Approved"
-        })
         
         frappe.db.commit()
         frappe.msgprint(f"Core User account created for {doc.work_email}")
@@ -842,10 +850,9 @@ def request_password_reset(email):
         frappe.throw(_("Email is required"))
     
     if not frappe.db.exists("User", email):
-        # We return a generic success message to prevent email enumeration
         return {
-            "status": "success", 
-            "message": _("If this email is registered, you will receive a reset link shortly.")
+            "status": "error", 
+            "message": _("This email address is not registered in our system.")
         }
     
     try:
@@ -861,4 +868,19 @@ def request_password_reset(email):
             "status": "error",
             "message": _("Failed to send reset email. Please contact support.")
         }
+
+
+
+def nuomics_register(BASE_URL,email,name,password):
+
+    print("\n🔹 Registering user...")
+    res = requests.post(f"{BASE_URL}/auth/register", json={
+        "name": name,
+        "email": email,
+        "password": password
+    })
+
+    return res.text
+
+
 

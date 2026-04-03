@@ -67,10 +67,11 @@ fixtures = [
 # Home Pages
 # ----------
 
-# application home page (will override Website Settings)
-# home_page = "Wlogin"
-
 # website user home page (by Role)
+role_home_page = {
+    "Organization Admin": "dashboard",
+    "System Manager": "dashboard"
+}
 
 
 # Generators

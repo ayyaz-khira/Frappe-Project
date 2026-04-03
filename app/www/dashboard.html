@@ -269,16 +269,17 @@
 {% endblock %}
 
 {% block content %}
-{% set registration_name = frappe.form_dict.registration or frappe.db.get_value("User", frappe.session.user, "organization") %}
+{% set registration_name = frappe.form_dict.registration or frappe.db.get_value("User", frappe.session.user,
+"organization") %}
 
 {# If System Manager lands here without a registration, send them to Master Command Center #}
 {% if not registration_name and "System Manager" in frappe.get_roles() %}
-    <script>window.location.href = "/admin-dashboard";</script>
+<script>window.location.href = "/admin-dashboard";</script>
 {% endif %}
 
 {% set reg = None %}
 {% if registration_name %}
-    {% set reg = frappe.get_doc("User Registration", registration_name) %}
+{% set reg = frappe.get_doc("User Registration", registration_name) %}
 {% endif %}
 
 <!-- Sidebar -->
@@ -336,7 +337,7 @@
     <!-- Header/Top Bar -->
     <div class="header">
         <div class="flex items-center gap-4">
-            <h2 class="text-xl font-semibold text-white logo-text">Dashboard Overview</h2>
+            <h2 class="text-xl font-semibold text-white logo-text">Organization Dashboard</h2>
             <span
                 class="px-4 py-1.5 bg-indigo-500/10 text-indigo-400 text-sm font-bold rounded-full border border-indigo-500/20 uppercase tracking-widest">{{
                 reg.organization_name }}</span>
@@ -450,7 +451,7 @@
                         <div class="flex gap-2">
                             <button onclick="uploadCSV()"
                                 class="text-[10px] font-bold text-white bg-indigo-600 px-3 py-1 rounded hover:bg-indigo-700 transition-colors">Process</button>
-                            <button onclick="clearCSV()" 
+                            <button onclick="clearCSV()"
                                 class="text-[10px] font-bold text-slate-400 bg-slate-500/10 px-2 py-1 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors">X</button>
                         </div>
                     </div>

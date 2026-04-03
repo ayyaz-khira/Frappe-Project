@@ -7,6 +7,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    .animate-shake { animation: shake 0.3s ease-in-out; }
+
     body {
         font-family: 'Outfit', sans-serif !important;
         background-color: #f9fafb !important;
@@ -104,6 +111,16 @@
             </div>
             <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
             <p class="text-slate-500 font-medium mt-2">NuOmics Organization Portal</p>
+            
+            <!-- Success Message for Password Update -->
+            <div id="password-success" class="hidden mt-6 w-full">
+                <div class="bg-green-500/10 border border-green-500/20 text-green-600 text-xs py-3 px-4 rounded-xl text-center font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Account ready. Please Sign In.</span>
+                </div>
+            </div>
         </div>
 
         <!-- Login/Reset Card -->
@@ -139,6 +156,11 @@
                     </div>
 
                     <div class="pt-2">
+                        <div id="login-error" class="hidden animate-shake mb-4">
+                            <div class="bg-red-500/10 border border-red-500/20 text-red-500 text-xs py-2.5 px-4 rounded-xl text-center font-bold uppercase tracking-widest">
+                                Incorrect email or password
+                            </div>
+                        </div>
                         <button type="submit" id="login-btn"
                             class="submit-btn w-full py-4 rounded-xl font-bold text-base tracking-wide uppercase transition-all">
                             Sign In to Portal
@@ -196,6 +218,14 @@
 {% block script %}
 <script>
     // Robust View Toggle
+    frappe.ready(function() {
+        const status = frappe.utils.get_url_arg('status');
+        if (status === 'password_set') {
+            const successMsg = document.getElementById('password-success');
+            successMsg.classList.remove('hidden');
+        }
+    });
+
     function showView(target) {
         const login = document.getElementById('login-view');
         const forgot = document.getElementById('forgot-view');
@@ -227,25 +257,51 @@
         }
     }
 
-    // Login Form Handler
+    // Final Hardened Login Handler
     document.getElementById('login-form').addEventListener('submit', function (e) {
         e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
+        const loginError = document.getElementById('login-error');
+        loginError.classList.add('hidden');
+        loginError.style.display = 'none';
 
+        const usr = document.getElementById('email').value;
+        const pwd = document.getElementById('password').value;
+        const btn = document.getElementById('login-btn');
+        
         frappe.call({
             method: 'login',
-            args: { usr: email, pwd: password },
-            btn: $('#login-btn'),
+            args: { usr, pwd },
+            quiet: true, // Let us handle errors
+            btn: $(btn),
             callback: function (r) {
-                if (r.message === "Logged In" || r.home_page) {
-                    frappe.show_alert({ message: __('Welcome back! Authenticating...'), indicator: 'green' });
-                    window.location.href = r.home_page || '/dashboard';
+                // Handle redirection from backend
+                const redirect = r.redirect_to || r.home_page || (r.message && r.message.indexOf("/") === 0 ? r.message : null);
+                
+                if (redirect) {
+                    window.location.href = redirect;
+                } else if (r.message === "Logged In") {
+                    window.location.href = '/dashboard';
                 } else {
-                    frappe.msgprint({ title: __('Access Denied'), indicator: 'red', message: r.message || __('The email or password entered is incorrect.') });
+                    handleLoginError();
                 }
+            },
+            error: function (xhr) {
+                handleLoginError();
             }
         });
+
+        function handleLoginError() {
+            loginError.classList.remove('hidden');
+            loginError.style.display = 'block';
+            
+            // Re-enable typing reset
+            const clear = () => {
+                loginError.classList.add('hidden');
+                loginError.style.display = 'none';
+            };
+            document.getElementById('email').oninput = clear;
+            document.getElementById('password').oninput = clear;
+        }
     });
 
     // Forgot Password Handler
@@ -261,7 +317,11 @@
                 if (r.message && r.message.status === 'success') {
                     showView('success');
                 } else {
-                    frappe.msgprint({ title: __('Reset Failed'), message: r.message ? r.message.message : "Error connecting to server", indicator: 'red' });
+                    frappe.msgprint({ 
+                         title: 'Reset Failed', 
+                         message: r.message ? r.message.message : "This email is not registered.", 
+                         indicator: 'red' 
+                    });
                 }
             }
         });
