@@ -54,17 +54,17 @@
     }
 
     .input-field:focus {
-        border-color: #6366f1;
+        border-color: #5CB9CE;
         background: #fff;
         outline: none;
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        box-shadow: 0 0 0 4px rgba(92, 185, 206, 0.1);
     }
 
     .submit-btn {
-        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        background: linear-gradient(135deg, #5CB9CE 0%, #4facbe 100%);
         color: white;
         transition: all 0.3s ease;
-        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+        box-shadow: 0 10px 15px -3px rgba(92, 185, 206, 0.3);
     }
 
     .submit-btn:hover {
@@ -127,6 +127,11 @@
         <div class="login-card p-10 overflow-hidden relative">
             <!-- Login View -->
             <div id="login-view">
+                <div id="login-error" style="display: none; margin-bottom: 24px;" class="animate-shake">
+                    <div class="bg-red-500/10 border border-red-500/20 text-red-500 text-xs py-3 px-4 rounded-xl text-center font-bold uppercase tracking-widest leading-relaxed">
+                        Incorrect email or password
+                    </div>
+                </div>
                 <form id="login-form" class="space-y-6">
                     <div>
                         <label class="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Email
@@ -142,7 +147,7 @@
                                 class="input-field w-full rounded-xl pl-4 pr-12 py-3.5 font-medium"
                                 placeholder="••••••••">
                             <button type="button" onclick="togglePasswordVisibility()" 
-                                class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-indigo-500 transition-colors focus:outline-none">
+                                class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-[#5CB9CE] transition-colors focus:outline-none">
                                 <svg id="eye-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -151,16 +156,11 @@
                         </div>
                         <div class="flex justify-end mt-2 px-1">
                             <button type="button" onclick="showView('forgot')"
-                                class="text-[11px] font-bold text-indigo-500 hover:text-indigo-600 transition-colors">Forgot Password?</button>
+                                class="text-[11px] font-bold text-[#5CB9CE] hover:text-[#4facbe] transition-colors">Forgot Password?</button>
                         </div>
                     </div>
 
                     <div class="pt-2">
-                        <div id="login-error" class="hidden animate-shake mb-4">
-                            <div class="bg-red-500/10 border border-red-500/20 text-red-500 text-xs py-2.5 px-4 rounded-xl text-center font-bold uppercase tracking-widest">
-                                Incorrect email or password
-                            </div>
-                        </div>
                         <button type="submit" id="login-btn"
                             class="submit-btn w-full py-4 rounded-xl font-bold text-base tracking-wide uppercase transition-all">
                             Sign In to Portal
@@ -187,7 +187,7 @@
                             Send Reset Link
                         </button>
                         <button type="button" onclick="showView('login')" 
-                            class="w-full mt-4 text-[11px] font-bold text-slate-400 hover:text-indigo-500 uppercase tracking-widest transition-colors text-center">
+                            class="w-full mt-4 text-[11px] font-bold text-slate-400 hover:text-[#5CB9CE] uppercase tracking-widest transition-colors text-center">
                             Back to Login
                         </button>
                     </div>
@@ -257,50 +257,79 @@
         }
     }
 
-    // Final Hardened Login Handler
+    // Direct AJAX Login Handler for Max Control
     document.getElementById('login-form').addEventListener('submit', function (e) {
         e.preventDefault();
-        const loginError = document.getElementById('login-error');
-        loginError.classList.add('hidden');
-        loginError.style.display = 'none';
+        console.log("Login form submitted...");
+
+        const errDiv = document.getElementById('login-error');
+        if (errDiv) errDiv.style.display = 'none';
 
         const usr = document.getElementById('email').value;
         const pwd = document.getElementById('password').value;
         const btn = document.getElementById('login-btn');
         
-        frappe.call({
-            method: 'login',
-            args: { usr, pwd },
-            quiet: true, // Let us handle errors
-            btn: $(btn),
-            callback: function (r) {
-                // Handle redirection from backend
-                const redirect = r.redirect_to || r.home_page || (r.message && r.message.indexOf("/") === 0 ? r.message : null);
+        // Disable button during call
+        const originalText = btn.innerText;
+        btn.innerText = "SIGING IN...";
+        btn.disabled = true;
+
+        $.ajax({
+            type: "POST",
+            url: "/",
+            data: {
+                cmd: "login",
+                usr: usr,
+                pwd: pwd
+            },
+            dataType: "json",
+            success: function(r) {
+                console.log("Login Success Response:", r);
                 
-                if (redirect) {
-                    window.location.href = redirect;
-                } else if (r.message === "Logged In") {
-                    window.location.href = '/dashboard';
+                // Very inclusive success check for Frappe login
+                const isSuccess = r.message === "Logged In" || 
+                                 (typeof r.message === "string" && r.message.startsWith("/")) ||
+                                 r.sid || 
+                                 r.session_user ||
+                                 (r && !r.exc && !r._server_messages);
+
+                if (isSuccess) {
+                    // Redirect to message or fallback to dashboard
+                    let target = "/dashboard";
+                    if (typeof r.message === "string" && r.message.startsWith("/")) {
+                        target = r.message;
+                    }
+                    console.log("Redirecting to:", target);
+                    window.location.href = target;
                 } else {
+                    console.warn("Response received but not recognized as success:", r);
                     handleLoginError();
                 }
             },
-            error: function (xhr) {
+
+            error: function(xhr) {
+                console.log("Login Error (XHR):", xhr.status, xhr.responseText);
                 handleLoginError();
+            },
+            complete: function() {
+                btn.innerText = originalText;
+                btn.disabled = false;
             }
         });
 
         function handleLoginError() {
-            loginError.classList.remove('hidden');
-            loginError.style.display = 'block';
-            
-            // Re-enable typing reset
-            const clear = () => {
-                loginError.classList.add('hidden');
-                loginError.style.display = 'none';
-            };
-            document.getElementById('email').oninput = clear;
-            document.getElementById('password').oninput = clear;
+            const errDiv = document.getElementById('login-error');
+            if (errDiv) {
+                errDiv.style.setProperty('display', 'block', 'important');
+                errDiv.classList.remove('animate-shake');
+                void errDiv.offsetWidth;
+                errDiv.classList.add('animate-shake');
+            }
+
+            frappe.show_alert({
+                message: __('Invalid email or password'),
+                indicator: 'red'
+            });
         }
     });
 
@@ -308,11 +337,12 @@
     document.getElementById('forgot-form').addEventListener('submit', function (e) {
         e.preventDefault();
         const email = document.getElementById('reset-email').value;
+        const btn = $('#reset-btn');
 
         frappe.call({
             method: 'app.api.request_password_reset',
             args: { email: email },
-            btn: $('#reset-btn'),
+            btn: btn,
             callback: function (r) {
                 if (r.message && r.message.status === 'success') {
                     showView('success');
@@ -326,5 +356,6 @@
             }
         });
     });
+
 </script>
 {% endblock %}

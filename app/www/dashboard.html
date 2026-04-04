@@ -534,7 +534,7 @@
     const registrationId = document.getElementById('internal-reg-id') ? document.getElementById('internal-reg-id').value.trim() : "None";
 
     async function updateMemberStatus(email, targetStatus) {
-        const action = targetStatus === 'Approved' ? 'enable and approved' : 'disable and reject';
+        const action = targetStatus === 'Approved' ? 'enable and approve' : 'disable and reject';
         if (!confirm(`Are you sure you want to ${action} this member (${email})?`)) return;
 
         frappe.call({

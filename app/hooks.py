@@ -167,6 +167,9 @@ website_route_rules=[
 
 
 on_login = "app.api.redirect_after_login"
+# Templates are automatically picked up due to standard naming (password_reset.html, new_user.html)
+
+
  
  # Scheduled Tasks
 # ---------------
