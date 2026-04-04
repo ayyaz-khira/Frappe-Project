@@ -681,10 +681,14 @@ def update_member_status(registration_id, email, status):
     # 1. Update core user enabled state
     if frappe.db.exists("User", email):
         u = frappe.get_doc("User", email)
+        was_disabled = not u.enabled
         u.enabled = 1 if status == "Approved" else 0
         u.save(ignore_permissions=True)
         
-    # 2. Update status in User Registration child table
+        # Trigger welcome email if freshly approved
+        if status == "Approved" and was_disabled:
+            u.send_welcome_mail_to_user()
+
     org_doc = frappe.get_doc("User Registration", registration_id)
     user_found = False
     for m in org_doc.members:
@@ -696,8 +700,9 @@ def update_member_status(registration_id, email, status):
     if user_found:
         org_doc.save(ignore_permissions=True)
         frappe.db.commit()
-        msg = f"User {email} has been {'enabled and approved' if status == 'Approved' else 'disabled and rejected'}."
+        msg = f"User {email} has been {'enabled and approved. An email has been sent to the email.' if status == 'Approved' else 'disabled and rejected.'}"
         return {"status": "success", "message": msg}
+
     else:
         return {"status": "error", "message": "Member not found in your organization record."}
 
