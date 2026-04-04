@@ -167,9 +167,12 @@ website_route_rules=[
 
 
 on_login = "app.api.redirect_after_login"
- 
- # Scheduled Tasks
-# ---------------
+home_page = "portal-login"
+post_login_redirect = "/admin-dashboard"
+
+website_route_rules = [
+    {"from_route": "/login", "to_route": "portal-login"},
+]
 
 # scheduler_events = {
 # 	"all": [

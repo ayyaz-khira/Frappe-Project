@@ -606,7 +606,6 @@
             let badgeClass = 'badge-warning';
             if (u.status === 'Approved') {
                 badgeClass = 'badge-success';
-                activeCount++;
             } else if (u.status === 'Rejected') {
                 badgeClass = 'badge-danger';
             }
@@ -635,7 +634,7 @@
 
         const activeDisplay = document.getElementById('active-count-display');
         if (activeDisplay) {
-            activeDisplay.innerText = activeCount;
+            activeDisplay.innerText = users.length;
             updateProgress();
         }
     }
