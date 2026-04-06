@@ -785,6 +785,44 @@ def get_admin_stats():
     return {"status": "success", "organizations": orgs}
 
 @frappe.whitelist()
+def update_org_full_status(registration_id, status):
+    validate_super_admin()
+    
+    if status not in ["Approved", "Rejected"]:
+        return {"status": "error", "message": "Invalid status value"}
+        
+    if not frappe.db.exists("User Registration", registration_id):
+        return {"status": "error", "message": "Organization not found"}
+        
+    org_doc = frappe.get_doc("User Registration", registration_id)
+    org_doc.approval_status = status
+    org_doc.save(ignore_permissions=True)
+    
+    # 1. Update the Main Admin User
+    if frappe.db.exists("User", org_doc.work_email):
+        main_user = frappe.get_doc("User", org_doc.work_email)
+        main_user.enabled = 1 if status == "Approved" else 0
+        main_user.save(ignore_permissions=True)
+        
+    # 2. Update all Organization Members
+    # We find all users where organization link matches this registration
+    users = frappe.get_all("User", filters={"organization": registration_id}, fields=["name"])
+    for u_info in users:
+        u = frappe.get_doc("User", u_info.name)
+        u.enabled = 1 if status == "Approved" else 0
+        u.save(ignore_permissions=True)
+        
+    # 3. Update the members child table in the registration doc for UI consistency
+    for member in org_doc.members:
+        member.status = status
+    org_doc.save(ignore_permissions=True)
+    
+    frappe.db.commit()
+    
+    msg = f"Organization and all its users have been {'activated' if status == 'Approved' else 'disabled'} successfully."
+    return {"status": "success", "message": msg}
+
+@frappe.whitelist()
 def get_org_growth_data():
     validate_super_admin()
     
