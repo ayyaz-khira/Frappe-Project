@@ -75,7 +75,9 @@
     <div class="flex justify-between items-center mb-8">
         <div>
             <h1 class="text-3xl font-bold dynamic-text tracking-tight mb-2">User Directory</h1>
-            <p class="text-sm font-medium text-slate-500">Managing all registered accounts across the ecosystem</p>
+            <p class="text-sm font-medium text-slate-500">Managing all registered accounts across the ecosystem &nbsp;·&nbsp;
+                <span id="user-count-summary" class="text-indigo-400 font-bold">Loading...</span>
+            </p>
         </div>
         <div class="flex items-center gap-4">
             <div class="relative">
@@ -160,16 +162,25 @@
             body.innerHTML = '<tr><td colspan="5" class="py-20 text-center text-slate-500 italic">No users found.</td></tr>';
             return;
         }
+        const enabledCount = users.filter(u => u.enabled).length;
+        const summaryEl = document.getElementById('user-count-summary');
+        if (summaryEl) summaryEl.innerText = `${users.length} total · ${enabledCount} enabled`;
+
         body.innerHTML = users.map(u => `
             <tr class="hover:bg-slate-500/5 transition-colors">
                 <td class="flex items-center gap-3">
-                    <div class="avatar">${u.full_name ? u.full_name[0] : '?'}</div>
-                    <span class="font-bold dynamic-text">${u.full_name}</span>
+                    <div class="avatar" style="background:${u.enabled ? 'rgba(99,102,241,0.1)' : 'rgba(244,63,94,0.08)'}; color:${u.enabled ? '#6366f1' : '#f43f5e'}">${u.full_name ? u.full_name[0].toUpperCase() : '?'}</div>
+                    <span class="font-bold dynamic-text">${u.full_name || u.name}</span>
                 </td>
                 <td class="text-xs text-slate-500 font-medium">${u.email}</td>
                 <td><span class="p-badge bg-indigo-500/10 text-indigo-500 text-[10px] uppercase font-bold px-3 py-1 rounded-full">${u.user_type || 'User'}</span></td>
-                <td><span class="text-[10px] font-bold ${u.enabled ? 'text-emerald-500' : 'text-red-500'} uppercase">${u.enabled ? 'Active' : 'Disabled'}</span></td>
-                <td class="text-xs text-slate-500">${new Date(u.creation).toLocaleDateString()}</td>
+                <td>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase ${u.enabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}">
+                        <span class="w-1.5 h-1.5 rounded-full ${u.enabled ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                        ${u.enabled ? 'Active' : 'Disabled'}
+                    </span>
+                </td>
+                <td class="text-xs text-slate-500">${new Date(u.creation).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
             </tr>
         `).join('');
     }

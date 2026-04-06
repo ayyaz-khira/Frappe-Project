@@ -833,13 +833,12 @@ def toggle_registration_status(registration_id, status):
 def get_org_growth_data():
     validate_super_admin()
     
-    # Get last 6 months of data
+    # Get data for the entire current year only
     from datetime import datetime
     from dateutil.relativedelta import relativedelta
     
     end_date = datetime.now()
-    start_date = end_date - relativedelta(months=5)
-    start_date = start_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    start_date = end_date.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
     
     query = """
         SELECT 
@@ -847,14 +846,19 @@ def get_org_growth_data():
             COUNT(*) as count,
             DATE_FORMAT(creation, '%%Y-%%m') as month_sort
         FROM `tabUser Registration`
-        WHERE creation >= %s
+        WHERE creation >= %s AND creation <= %s
         GROUP BY month_sort
         ORDER BY month_sort ASC
     """
     
-    raw_data = frappe.db.sql(query, (start_date,), as_dict=1)
+    raw_data = frappe.db.sql(query, (start_date, end_date), as_dict=1)
     
-    # Fill in missing months with 0
+    # Yearly Calculation
+    total_this_year = sum(item['count'] for item in raw_data)
+    elapsed_months = end_date.month
+    year_avg = round(total_this_year / elapsed_months, 1) if elapsed_months > 0 else 0
+    
+    # Fill in missing months from Jan to current
     labels = []
     values = []
     
@@ -870,6 +874,8 @@ def get_org_growth_data():
         values.append(found)
         
         current += relativedelta(months=1)
+    
+    # ... rest of function (Plan Distribution)
         
     # 2. Get Plan Distribution
     plan_data = frappe.db.sql("""
@@ -887,7 +893,8 @@ def get_org_growth_data():
         "status": "success",
         "data": {
             "labels": labels,
-            "values": values
+            "values": values,
+            "year_avg": year_avg
         },
         "plans": plans
     }
@@ -915,8 +922,11 @@ def mark_alert_as_read(alert_id):
 def get_all_users():
     validate_super_admin()
     users = frappe.get_all("User",
-        fields=["name", "full_name", "email", "user_type", "creation"],
-        filters={"enabled": 1, "user_type": ["!=", "System User"]},
+        fields=["name", "full_name", "email", "user_type", "creation", "enabled"],
+        filters={
+            "user_type": ["!=", "System User"],
+            "name": ["!=", "Guest"]
+        },
         order_by="creation desc"
     )
     return {"status": "success", "users": users}

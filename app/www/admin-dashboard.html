@@ -828,7 +828,7 @@
 
     function updateKPIs(data, plans) {
         const total = data.values.reduce((a, b) => a + b, 0);
-        const avg = data.values.length ? (total / data.values.length).toFixed(1) : 0;
+        const avg = data.year_avg || 0;
         const peakIdx = data.values.indexOf(Math.max(...data.values));
         const peak = peakIdx >= 0 ? data.labels[peakIdx] : '—';
         document.getElementById('kpi-total').innerText = total;
