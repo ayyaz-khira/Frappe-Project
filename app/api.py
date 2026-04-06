@@ -678,6 +678,11 @@ def update_member_status(registration_id, email, status):
     if status not in ["Approved", "Rejected"]:
         return {"status": "error", "message": "Invalid status value"}
 
+    # 1. Check organization status - cannot enable user if org is disabled
+    org_status = frappe.db.get_value("User Registration", registration_id, "approval_status")
+    if status == "Approved" and org_status != "Approved":
+        return {"status": "error", "message": "Cannot enable a member while the organization is disabled."}
+
     # 1. Update core user enabled state
     if frappe.db.exists("User", email):
         u = frappe.get_doc("User", email)
