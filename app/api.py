@@ -782,18 +782,20 @@ def get_admin_stats():
     )
     
     for org in orgs:
-        # Get active member count
-        org.member_count = frappe.db.count("User", {"organization": org.name, "enabled": 1})
+        # Count all users (enabled or disabled) for seat occupancy
+        org.member_count = frappe.db.count("User", {"organization": org.name})
+        # Count only enabled users for the "X enabled" stat
+        org.enabled_count = frappe.db.count("User", {"organization": org.name, "enabled": 1})
         # Format some display fields
         org.admin_name = f"{org.first_name} {org.last_name}"
         
     return {"status": "success", "organizations": orgs}
 
 @frappe.whitelist()
-def update_org_full_status(registration_id, status):
+def toggle_registration_status(registration_id, status):
     validate_super_admin()
     
-    if status not in ["Approved", "Rejected"]:
+    if status not in ["Approved", "Rejected", "Inactive", "Active"]:
         return {"status": "error", "message": "Invalid status value"}
         
     if not frappe.db.exists("User Registration", registration_id):
