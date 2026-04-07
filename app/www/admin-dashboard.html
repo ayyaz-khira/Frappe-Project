@@ -488,14 +488,18 @@
 
 <!-- Sidebar -->
 <aside class="sidebar">
-    <div class="mb-10 px-2">
-        <div class="flex items-center gap-3">
-            <div
-                class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-                <span class="text-white font-bold text-xl">Nμ</span>
-            </div>
-            <span class="logo-text !text-2xl tracking-tighter dynamic-text">Omics</span>
+    <div class="flex items-center mb-8">
+
+        <div class="flex items-center justify-center border-[1.5px] border-slate-900 w-[42px] h-[42px]">
+            <span
+                class="font-sans text-[24px] font-medium leading-none tracking-tight flex items-baseline text-slate-900 uppercase">
+                N<span class="text-[18px] ml-[0.5px] lowercase">μ</span>
+            </span>
         </div>
+
+        <span class="font-sans text-[24px] font-normal tracking-tight ml-2.5 pr-2 text-slate-900">
+            Omics
+        </span>
     </div>
 
     <nav class="space-y-1">
@@ -640,8 +644,10 @@
                     <div class="flex items-center justify-between">
                         <h4 class="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Growth Curve</h4>
                         <div class="flex rounded-lg overflow-hidden border border-white/10">
-                            <button id="btn-line" onclick="switchChartType('line')" class="px-3 py-1 text-[10px] font-bold uppercase bg-indigo-500 text-white transition-all">Line</button>
-                            <button id="btn-bar" onclick="switchChartType('bar')" class="px-3 py-1 text-[10px] font-bold uppercase text-slate-400 hover:bg-white/5 transition-all">Bar</button>
+                            <button id="btn-line" onclick="switchChartType('line')"
+                                class="px-3 py-1 text-[10px] font-bold uppercase bg-indigo-500 text-white transition-all">Line</button>
+                            <button id="btn-bar" onclick="switchChartType('bar')"
+                                class="px-3 py-1 text-[10px] font-bold uppercase text-slate-400 hover:bg-white/5 transition-all">Bar</button>
                         </div>
                     </div>
                     <div class="relative h-[340px]">
@@ -649,10 +655,13 @@
                     </div>
                 </div>
                 <div class="relative h-[400px] flex flex-col">
-                    <h4 class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-4">Org Type Distribution</h4>
+                    <h4 class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-4">Org Type
+                        Distribution</h4>
                     <div class="flex-1 min-h-0 relative">
                         <canvas id="planChart"></canvas>
-                        <div id="doughnut-center" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style="padding-bottom:60px;">
+                        <div id="doughnut-center"
+                            class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+                            style="padding-bottom:60px;">
                             <p class="text-3xl font-bold dynamic-text" id="doughnut-total">—</p>
                             <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Total Orgs</p>
                         </div>
@@ -828,7 +837,7 @@
 
     function updateKPIs(data, plans) {
         const total = data.values.reduce((a, b) => a + b, 0);
-        const avg = data.values.length ? (total / data.values.length).toFixed(1) : 0;
+        const avg = data.year_avg || 0;
         const peakIdx = data.values.indexOf(Math.max(...data.values));
         const peak = peakIdx >= 0 ? data.labels[peakIdx] : '—';
         document.getElementById('kpi-total').innerText = total;
@@ -897,7 +906,7 @@
                         titleColor: '#f9fafb',
                         bodyColor: '#9ca3af',
                         callbacks: {
-                            label: ctx => ` ${ctx.parsed} orgs  (${Math.round(ctx.parsed / ctx.dataset.data.reduce((a,b) => a+b,0) * 100)}%)`
+                            label: ctx => ` ${ctx.parsed} orgs  (${Math.round(ctx.parsed / ctx.dataset.data.reduce((a, b) => a + b, 0) * 100)}%)`
                         }
                     }
                 }
