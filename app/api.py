@@ -75,10 +75,21 @@ def redirect_after_login(login_manager):
     if user == "Administrator":
         return
 
+    roles = frappe.get_roles(user)
+
+    # Allow System Managers
+    if "System Manager" in roles:
+        return
+
     # Organization Admin redirect
-    if "Organization Admin" in frappe.get_roles(user):
+    if "Organization Admin" in roles:
         frappe.local.response["type"] = "redirect"
         frappe.local.response["location"] = "/dashboard"
+        return
+
+    # If they are neither Organization Admin, System Manager, nor Administrator
+    frappe.throw("NOT_ORG_ADMIN")
+
 
 
 
@@ -675,8 +686,8 @@ def update_member_status(registration_id, email, status):
     if not registration_id or not email or not status:
         return {"status": "error", "message": "Missing required information"}
         
-    # Valid status values: "Approved" or "Rejected"
-    if status not in ["Approved", "Rejected"]:
+    # Valid status values
+    if status not in ["Approved", "Rejected", "Pending Approval"]:
         return {"status": "error", "message": "Invalid status value"}
 
     # 1. Check organization status - cannot enable user if org is disabled
@@ -718,13 +729,26 @@ def get_org_users(registration_id):
     validate_org_access(registration_id)
     if not registration_id:
         return {"status": "error", "message": "Missing registration ID"}
-        
+    # Get the parent organization's full details to filter out the main admin
+    org_doc = frappe.db.get_value("User Registration", registration_id, ["approval_status", "work_email"], as_dict=True)
+    org_status = org_doc.get("approval_status")
+    org_email = org_doc.get("work_email")
+    
     members = frappe.get_all("Org User Item", 
         fields=["name1 as name", "email", "status", "creation"], 
         filters={"parent": registration_id, "parenttype": "User Registration"},
         order_by="creation desc"
     )
-    return {"status": "success", "users": members}
+    
+    # Filter out the organization main admin from showing up as an inner user
+    filtered_members = [m for m in members if m.email != org_email]
+    
+    # If the parent org is Pending Approval, forcibly mask all members to Pending Approval
+    if org_status == "Pending Approval":
+        for m in filtered_members:
+            m.status = "Pending Approval"
+            
+    return {"status": "success", "users": filtered_members}
 
 
 
@@ -753,14 +777,6 @@ def handle_registration_approval(doc, method):
         
         # 4. Add the specific role we just created
         new_user.add_roles("Organization Admin") 
-        
-        # 5. Add the admin themselves to the members child table
-        doc.append("members", {
-            "name1": f"{doc.first_name} {doc.last_name}",
-            "email": doc.work_email,
-            "user_ref": new_user.name,
-            "status": "Approved"
-        })
         
         frappe.db.commit()
         frappe.msgprint(f"Core User account created for {doc.work_email}")
@@ -796,7 +812,7 @@ def get_admin_stats():
 def toggle_registration_status(registration_id, status):
     validate_super_admin()
     
-    if status not in ["Approved", "Rejected", "Inactive", "Active"]:
+    if status not in ["Approved", "Rejected", "Inactive", "Active", "Pending Approval"]:
         return {"status": "error", "message": "Invalid status value"}
         
     if not frappe.db.exists("User Registration", registration_id):
@@ -923,14 +939,48 @@ def mark_alert_as_read(alert_id):
 def get_all_users():
     validate_super_admin()
     users = frappe.get_all("User",
-        fields=["name", "full_name", "email", "user_type", "creation", "enabled"],
+        fields=["name", "full_name", "email", "user_type", "creation", "enabled", "organization"],
         filters={
             "user_type": ["!=", "System User"],
             "name": ["!=", "Guest"]
         },
         order_by="creation desc"
     )
-    return {"status": "success", "users": users}
+    
+    # Map the explicit status from Org User Item for each user
+    final_users = []
+    
+    for u in users:
+        status_val = None
+        org_status = None
+        is_main_admin = False
+        
+        # 1. First see if there is an exact member item match in a registration
+        if u.organization:
+            status_val = frappe.db.get_value("Org User Item", {"user_ref": u.name, "parent": u.organization}, "status")
+            reg_data = frappe.db.get_value("User Registration", u.organization, ["approval_status", "work_email"], as_dict=True)
+            if reg_data:
+                org_status = reg_data.get("approval_status")
+                if reg_data.get("work_email") == u.email:
+                    is_main_admin = True
+            
+        # 2. Alternatively they might be the main admin of the org, check User Registration directly
+        if not status_val and not org_status:
+            reg_status = frappe.db.get_value("User Registration", {"work_email": u.email}, "approval_status")
+            if reg_status:
+                status_val = reg_status
+                org_status = reg_status
+                is_main_admin = True
+                
+        # 3. Mask child member status if parent org is pending. 
+        if org_status == "Pending Approval":
+            status_val = "Pending Approval"
+                
+        u.actual_status = status_val or ("Approved" if u.enabled else "Disabled")
+        u.is_org_admin = is_main_admin
+        final_users.append(u)
+        
+    return {"status": "success", "users": final_users}
 
 @frappe.whitelist(allow_guest=True)
 def request_password_reset(email):
@@ -953,5 +1003,3 @@ def request_password_reset(email):
         err_msg = str(e) if hasattr(e, 'message') else "Failed to send reset email. Please contact support."
         frappe.log_error(frappe.get_traceback(), "Password Reset Failed")
         return {"status": "error", "message": err_msg}
-
-
