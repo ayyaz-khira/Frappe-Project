@@ -2,6 +2,7 @@ import frappe
 import csv
 import base64
 from frappe import _
+import frappe.utils
 
 # Helper to validate if the current user has access to a specific organization registration
 def validate_org_access(registration_id):
@@ -97,7 +98,7 @@ def capture_registration_lead(first_name, last_name, work_email, organization_na
 
     try:
         new_lead = frappe.get_doc({
-            "doctype": "Organization Registration",   # ✅ FIXED
+            "doctype": "Organization Registration",   
             "first_name": first_name,
             "last_name": last_name,
             "work_email": work_email,
@@ -108,7 +109,7 @@ def capture_registration_lead(first_name, last_name, work_email, organization_na
         new_lead.insert(ignore_permissions=True)
         frappe.db.commit()
 
-        print("DOC CREATED:", new_lead.name)   # ✅ FIXED
+        print("DOC CREATED:", new_lead.name)   
 
         return {
             "status": "success",
@@ -930,4 +931,27 @@ def get_all_users():
         order_by="creation desc"
     )
     return {"status": "success", "users": users}
+
+@frappe.whitelist(allow_guest=True)
+def request_password_reset(email):
+    if not email:
+        return {"status": "error", "message": "Email is required."}
+    
+    # Check if user exists
+    user = frappe.db.get_value("User", {"email": email}, "name")
+    if not user:
+        return {"status": "error", "message": "This email is not registered."}
+        
+    try:
+        ur = frappe.get_doc("User", user)
+        if not ur.enabled:
+            return {"status": "error", "message": "Your account is disabled. Please wait for approval or contact your administrator."}
+        ur.reset_password(send_email=True)
+        return {"status": "success"}
+    except Exception as e:
+        # Standardize the error message if it is a frappe error, else generic Support message.
+        err_msg = str(e) if hasattr(e, 'message') else "Failed to send reset email. Please contact support."
+        frappe.log_error(frappe.get_traceback(), "Password Reset Failed")
+        return {"status": "error", "message": err_msg}
+
 
