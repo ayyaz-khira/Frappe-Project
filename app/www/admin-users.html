@@ -173,11 +173,17 @@
                     <span class="font-bold dynamic-text">${u.full_name || u.name}</span>
                 </td>
                 <td class="text-xs text-slate-500 font-medium">${u.email}</td>
-                <td><span class="p-badge bg-indigo-500/10 text-indigo-500 text-[10px] uppercase font-bold px-3 py-1 rounded-full">${u.user_type || 'User'}</span></td>
+                <td><span class="p-badge ${u.is_org_admin ? 'bg-amber-500/10 text-amber-500' : 'bg-indigo-500/10 text-indigo-500'} text-[10px] uppercase font-bold px-3 py-1 rounded-full">${u.is_org_admin ? 'Admin' : (u.user_type || 'User')}</span></td>
                 <td>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase ${u.enabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}">
-                        <span class="w-1.5 h-1.5 rounded-full ${u.enabled ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
-                        ${u.enabled ? 'Active' : 'Disabled'}
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                        u.actual_status === 'Approved' ? 'bg-emerald-500/10 text-emerald-500' :
+                        (u.actual_status === 'Pending Approval' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500')
+                    }">
+                        <span class="w-1.5 h-1.5 rounded-full ${
+                            u.actual_status === 'Approved' ? 'bg-emerald-500' :
+                            (u.actual_status === 'Pending Approval' ? 'bg-amber-500' : 'bg-rose-500')
+                        }"></span>
+                        ${u.actual_status === 'Approved' ? 'Active' : u.actual_status}
                     </span>
                 </td>
                 <td class="text-xs text-slate-500">${new Date(u.creation).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
