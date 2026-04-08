@@ -1,0 +1,294 @@
+{% extends "templates/web.html" %}
+
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block style %}
+<script src="https://cdn.tailwindcss.com"></script>
+<link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+<style>
+    :root {
+        --primary: #6366f1;
+        --sidebar-bg: #111827;
+        --main-bg: #0b0f1a;
+        --card-bg: #1f2937;
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --text-primary: #f9fafb;
+        --text-secondary: #9ca3af;
+    }
+
+    [data-theme="light"] {
+        --sidebar-bg: #ffffff;
+        --main-bg: #f9fafb;
+        --card-bg: #ffffff;
+        --glass-border: rgba(0, 0, 0, 0.05);
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+    }
+
+    body {
+        font-family: 'Inter', sans-serif !important;
+        background-color: var(--main-bg) !important;
+        color: var(--text-secondary);
+        margin: 0;
+    }
+
+    .sidebar {
+        width: 280px;
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        background: var(--sidebar-bg);
+        border-right: 1px solid var(--glass-border);
+        padding: 40px 24px;
+        z-index: 1000;
+    }
+
+    .main-content {
+        margin-left: 280px;
+        padding: 32px 48px;
+        min-height: 100vh;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        color: var(--text-secondary);
+        border-radius: 12px;
+        margin-bottom: 8px;
+        transition: all 0.2s;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .nav-link:hover {
+        background: rgba(99, 102, 241, 0.05);
+        color: var(--primary);
+    }
+
+    .nav-link.active {
+        background: var(--primary);
+        color: white !important;
+        box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+    }
+
+    .user-table-container {
+        background: var(--card-bg);
+        border-radius: 20px;
+        border: 1px solid var(--glass-border);
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    th {
+        padding: 16px 24px;
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 12px;
+    }
+
+    .dynamic-text {
+        color: var(--text-primary) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<aside class="sidebar">
+    <div class="mb-10 px-2">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
+                <span class="text-white font-bold text-xl">Nμ</span>
+            </div>
+            <span class="text-2xl font-bold dynamic-text tracking-tighter">Omics</span>
+        </div>
+    </div>
+    <nav class="space-y-1">
+        <a href="/admin-dashboard" class="nav-link">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
+                </path>
+            </svg>
+            Dashboard
+        </a>
+        <a href="/admin-users" class="nav-link active">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z">
+                </path>
+            </svg>
+            User Directory
+        </a>
+    </nav>
+</aside>
+
+<main class="main-content">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold dynamic-text tracking-tight mb-2">User Directory</h1>
+            <p class="text-sm font-medium text-slate-500">Managing all registered accounts across the ecosystem
+                &nbsp;·&nbsp;
+                <span id="user-count-summary" class="text-indigo-400 font-bold">Loading...</span>
+            </p>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="relative">
+                <input type="text" id="user-search-main" onkeyup="filterUserList()" placeholder="Search users..."
+                    class="pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-glass-border text-sm dynamic-text focus:outline-none focus:ring-2 focus:ring-indigo-500/50">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+            <button onclick="toggleTheme()"
+                class="p-2.5 bg-slate-500/5 rounded-xl border border-glass-border hover:bg-indigo-500/10 transition-all text-slate-500">
+                <svg id="moon-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                    </path>
+                </svg>
+                <svg id="sun-icon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="user-table-container">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Email</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                </tr>
+            </thead>
+            <tbody id="user-table-body">
+                <tr>
+                    <td colspan="5" class="py-20 text-center italic">Loading users...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+{% endblock %}
+
+{% block script %}
+<script>
+    let usersData = [];
+    const savedTheme = localStorage.getItem('nu_admin_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
+    function initUserPage() {
+        if (typeof frappe !== 'undefined' && frappe.call && frappe.csrf_token) {
+            loadUsers();
+        } else {
+            setTimeout(initUserPage, 200);
+        }
+    }
+
+    setTimeout(initUserPage, 300);
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const targetTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', targetTheme);
+        localStorage.setItem('nu_admin_theme', targetTheme);
+        updateThemeIcons(targetTheme);
+    }
+
+    function updateThemeIcons(theme) {
+        const moon = document.getElementById('moon-icon');
+        const sun = document.getElementById('sun-icon');
+        if (!moon || !sun) return;
+        if (theme === 'light') { moon.classList.add('hidden'); sun.classList.remove('hidden'); }
+        else { sun.classList.add('hidden'); moon.classList.remove('hidden'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => updateThemeIcons(savedTheme));
+
+    function loadUsers() {
+        frappe.call({
+            method: 'app.api.get_all_users',
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    usersData = r.message.users;
+                    renderUsers(usersData);
+                }
+            }
+        });
+    }
+
+    function renderUsers(users) {
+        const body = document.getElementById('user-table-body');
+        if (users.length === 0) {
+            body.innerHTML = '<tr><td colspan="5" class="py-20 text-center text-slate-500 italic">No users found.</td></tr>';
+            return;
+        }
+        const enabledCount = users.filter(u => u.enabled).length;
+        const summaryEl = document.getElementById('user-count-summary');
+        if (summaryEl) summaryEl.innerText = `${users.length} total · ${enabledCount} enabled`;
+
+        body.innerHTML = users.map(u => `
+            <tr class="hover:bg-slate-500/5 transition-colors">
+                <td class="flex items-center gap-3">
+                    <div class="avatar" style="background:${u.enabled ? 'rgba(99,102,241,0.1)' : 'rgba(244,63,94,0.08)'}; color:${u.enabled ? '#6366f1' : '#f43f5e'}">${u.full_name ? u.full_name[0].toUpperCase() : '?'}</div>
+                    <span class="font-bold dynamic-text">${u.full_name || u.name}</span>
+                </td>
+                <td class="text-xs text-slate-500 font-medium">${u.email}</td>
+                <td><span class="p-badge ${u.is_org_admin ? 'bg-amber-500/10 text-amber-500' : 'bg-indigo-500/10 text-indigo-500'} text-[10px] uppercase font-bold px-3 py-1 rounded-full">${u.is_org_admin ? 'Admin' : (u.user_type || 'User')}</span></td>
+                <td>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase ${u.actual_status === 'Approved' ? 'bg-emerald-500/10 text-emerald-500' :
+                (u.actual_status === 'Pending Approval' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500')
+            }">
+                        <span class="w-1.5 h-1.5 rounded-full ${u.actual_status === 'Approved' ? 'bg-emerald-500' :
+                (u.actual_status === 'Pending Approval' ? 'bg-amber-500' : 'bg-rose-500')
+            }"></span>
+                        ${u.actual_status === 'Approved' ? 'Active' : u.actual_status}
+                    </span>
+                </td>
+                <td class="text-xs text-slate-500">${new Date(u.creation).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+            </tr>
+        `).join('');
+    }
+
+    function filterUserList() {
+        const query = document.getElementById('user-search-main').value.toLowerCase();
+        const filtered = usersData.filter(u =>
+            (u.full_name || '').toLowerCase().includes(query) ||
+            (u.email || '').toLowerCase().includes(query)
+        );
+        renderUsers(filtered);
+    }
+</script>
+{% endblock %}

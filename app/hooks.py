@@ -222,7 +222,7 @@ on_login = "app.api.redirect_after_login"
 
 # Request Events
 # ----------------
-# before_request = ["app.utils.before_request"]
+before_request = ["app.api.validate_org_admin_route"]
 # after_request = ["app.utils.after_request"]
 
 # Job Events

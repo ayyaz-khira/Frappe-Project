@@ -9,6 +9,7 @@
 <link
     href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     :root {
         --primary: #6366f1;
@@ -151,21 +152,98 @@
         border-bottom: none;
     }
 
-    .org-row {
-        transition: all 0.2s;
+    /* Modern Org Cards UI matching screenshot */
+    .org-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        border: 1px solid var(--glass-border);
+        padding: 12px 24px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
     }
 
-    .org-row:hover {
-        background: rgba(99, 102, 241, 0.03);
+    .org-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary);
+    }
+
+    .avatar-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 14px;
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .progress-track {
+        width: 120px;
+        height: 6px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 1s ease-in-out;
+    }
+
+    .status-active {
+        background: #ecfdf5;
+        color: #059669;
+    }
+
+    [data-theme="dark"] .status-active {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+    }
+
+    .status-trial {
+        background: #fffbeb;
+        color: #d97706;
+    }
+
+    [data-theme="dark"] .status-trial {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+    }
+
+    .status-suspended {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    [data-theme="dark"] .status-suspended {
+        background: rgba(244, 63, 94, 0.15);
+        color: #fb7185;
+    }
+
+    .plan-badge {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+    }
+
+    [data-theme="dark"] .progress-track {
+        background: rgba(255, 255, 255, 0.1);
     }
 
     /* Modern Badges */
     .p-badge {
         padding: 4px 10px;
-        border-radius: 8px;
-        font-size: 11px;
-        font-weight: 600;
+        border-radius: 9999px;
+        font-size: 10px;
+        font-weight: 700;
     }
 
     .badge-indigo {
@@ -213,6 +291,195 @@
     ::-webkit-scrollbar-thumb:hover {
         background: var(--text-secondary);
     }
+
+    /* Modal UI */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .modal-content {
+        background: var(--card-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        width: 100%;
+        max-width: 950px;
+        padding: 32px;
+        position: relative;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Support Floating Widget */
+    .support-widget {
+        position: fixed;
+        bottom: 32px;
+        right: 32px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 12px;
+        animation: slideUpFade 0.6s ease-out 0.5s both;
+    }
+
+    @keyframes slideUpFade {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .support-btn {
+        width: 64px;
+        height: 64px;
+        background: var(--card-bg);
+        color: white !important;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: 1px solid var(--glass-border);
+        position: relative;
+        overflow: hidden;
+        text-decoration: none !important;
+        backdrop-filter: blur(10px);
+    }
+
+    .support-btn:hover {
+        transform: scale(1.1) translateY(-5px);
+        background: var(--primary-hover);
+        box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.6);
+    }
+
+    .support-btn::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transform: translateX(-100%);
+        transition: transform 0.6s ease;
+    }
+
+    .support-btn:hover::after {
+        transform: translateX(100%);
+    }
+
+    .support-label {
+        background: var(--card-bg);
+        border: 1px solid var(--glass-border);
+        padding: 10px 20px;
+        border-radius: 14px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-primary);
+        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+        opacity: 0;
+        transform: translateY(10px) scale(0.9);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        white-space: nowrap;
+        backdrop-filter: blur(8px);
+    }
+
+    .support-widget:hover .support-label {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    .support-btn svg {
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .support-btn:hover svg {
+        transform: rotate(15deg) scale(1.1);
+    }
+
+    /* Status Dropdown */
+    .status-dropdown {
+        position: absolute;
+        top: calc(100% + 5px);
+        right: 0;
+        background: var(--card-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+        z-index: 3000;
+        min-width: 140px;
+        overflow: hidden;
+        display: none;
+        backdrop-filter: blur(20px);
+        animation: dropdownIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes dropdownIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px) scale(0.95);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .dropdown-item {
+        padding: 12px 16px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--glass-border);
+        color: var(--text-secondary);
+    }
+
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+        background: rgba(99, 102, 241, 0.08);
+        color: var(--text-primary);
+    }
+
+    .dropdown-item.active-opt:hover {
+        color: #10b981;
+    }
+
+    .dropdown-item.disable-opt:hover {
+        color: #f43f5e;
+    }
 </style>
 {% endblock %}
 
@@ -221,14 +488,18 @@
 
 <!-- Sidebar -->
 <aside class="sidebar">
-    <div class="mb-10 px-2">
-        <div class="flex items-center gap-3">
-            <div
-                class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-                <span class="text-white font-bold text-xl">Nμ</span>
-            </div>
-            <span class="logo-text !text-2xl tracking-tighter dynamic-text">Omics</span>
+    <div class="flex items-center mb-8">
+
+        <div class="flex items-center justify-center border-[1.5px] border-slate-900 w-[42px] h-[42px]">
+            <span
+                class="font-sans text-[24px] font-medium leading-none tracking-tight flex items-baseline text-slate-900 uppercase">
+                N<span class="text-[18px] ml-[0.5px] lowercase">μ</span>
+            </span>
         </div>
+
+        <span class="font-sans text-[24px] font-normal tracking-tight ml-2.5 pr-2 text-slate-900">
+            Omics
+        </span>
     </div>
 
     <nav class="space-y-1">
@@ -248,6 +519,14 @@
             </svg>
             Explorer
         </a>
+        <a href="/crm" class="nav-link">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                </path>
+            </svg>
+            CRM
+        </a>
     </nav>
 
     <div class="absolute bottom-10 left-0 w-full px-6">
@@ -263,16 +542,6 @@
                 </path>
             </svg>
             <span>Appearance</span>
-        </button>
-
-        <button onclick="logoutAdmin()"
-            class="mt-4 flex items-center justify-center p-2 rounded-xl bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-all w-full text-[10px] uppercase font-bold tracking-widest border border-red-500/20">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
-                </path>
-            </svg>
-            Sign Out
         </button>
     </div>
 </aside>
@@ -296,11 +565,117 @@
         </div>
     </div>
 
+    <!-- Alerts Modal -->
+    <div id="alerts-modal" class="modal-overlay" onclick="closeAlertsModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h3 class="text-xl font-bold dynamic-text">System Alerts</h3>
+                    <p class="text-xs text-slate-500 font-medium">Critical events and user activities</p>
+                </div>
+                <button onclick="closeAlertsModal()" class="p-2 hover:bg-slate-500/10 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="alerts-list-container" class="max-h-[500px] overflow-y-auto space-y-3 pr-2">
+                <div class="py-10 text-center text-slate-500 italic">Checking for alerts...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Modal -->
+    <div id="users-modal" class="modal-overlay" onclick="closeUsersModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h3 class="text-xl font-bold dynamic-text">User Directory</h3>
+                    <p class="text-xs text-slate-500 font-medium">All registered users across the ecosystem</p>
+                </div>
+                <button onclick="closeUsersModal()" class="p-2 hover:bg-slate-500/10 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="users-list-container" class="max-h-[500px] overflow-y-auto space-y-3 pr-2">
+                <div class="py-10 text-center text-slate-500 italic">Fetching user data...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Modal -->
+    <div id="chart-modal" class="modal-overlay" onclick="closeChartModal()">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-width:1100px;">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-xl font-bold dynamic-text">Ecosystem Growth</h3>
+                    <p class="text-xs text-slate-500 font-medium">Monthly organization registration velocity</p>
+                </div>
+                <button onclick="closeChartModal()" class="p-2 hover:bg-slate-500/10 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- KPI Summary Row -->
+            <div class="grid grid-cols-3 gap-4 mb-8" id="chart-kpi-row">
+                <div class="p-4 rounded-2xl border border-indigo-500/10 bg-indigo-500/5 text-center">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Orgs</p>
+                    <p class="text-3xl font-bold text-indigo-400" id="kpi-total">—</p>
+                </div>
+                <div class="p-4 rounded-2xl border border-violet-500/10 bg-violet-500/5 text-center">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Avg / Month</p>
+                    <p class="text-3xl font-bold text-violet-400" id="kpi-avg">—</p>
+                </div>
+                <div class="p-4 rounded-2xl border border-emerald-500/10 bg-emerald-500/5 text-center">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Peak Month</p>
+                    <p class="text-xl font-bold text-emerald-400" id="kpi-peak">—</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div class="flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Growth Curve</h4>
+                        <div class="flex rounded-lg overflow-hidden border border-white/10">
+                            <button id="btn-line" onclick="switchChartType('line')"
+                                class="px-3 py-1 text-[10px] font-bold uppercase bg-indigo-500 text-white transition-all">Line</button>
+                            <button id="btn-bar" onclick="switchChartType('bar')"
+                                class="px-3 py-1 text-[10px] font-bold uppercase text-slate-400 hover:bg-white/5 transition-all">Bar</button>
+                        </div>
+                    </div>
+                    <div class="relative h-[340px]">
+                        <canvas id="growthChart"></canvas>
+                    </div>
+                </div>
+                <div class="relative h-[400px] flex flex-col">
+                    <h4 class="text-[10px] uppercase font-bold text-slate-500 tracking-widest mb-4">Org Type
+                        Distribution</h4>
+                    <div class="flex-1 min-h-0 relative">
+                        <canvas id="planChart"></canvas>
+                        <div id="doughnut-center"
+                            class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+                            style="padding-bottom:60px;">
+                            <p class="text-3xl font-bold dynamic-text" id="doughnut-total">—</p>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Total Orgs</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Quick Stats Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div class="stat-card">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div class="stat-card cursor-pointer" onclick="showOrgGrowthChart()">
             <div class="flex justify-between items-center mb-4">
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Organizations</p>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Orgs</p>
                 <div class="p-2 bg-indigo-500/10 rounded-lg text-indigo-500">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -309,12 +684,16 @@
                     </svg>
                 </div>
             </div>
-            <h2 class="text-4xl font-bold dynamic-text" id="total-orgs">0</h2>
+            <h2 class="text-4xl font-bold dynamic-text mb-2" id="total-orgs">0</h2>
+            <p class="text-xs font-medium text-emerald-500" id="active-orgs">0 active</p>
         </div>
-        <div class="stat-card">
+        <div class="stat-card cursor-pointer group" onclick="window.location.href='/admin-users'">
             <div class="flex justify-between items-center mb-4">
-                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Members</p>
-                <div class="p-2 bg-violet-500/10 rounded-lg text-violet-500">
+                <p
+                    class="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-violet-500 transition-colors">
+                    Total Users</p>
+                <div
+                    class="p-2 bg-violet-500/10 rounded-lg text-violet-500 group-hover:bg-violet-500 group-hover:text-white transition-all">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
@@ -322,50 +701,344 @@
                     </svg>
                 </div>
             </div>
-            <h2 class="text-4xl font-bold dynamic-text" id="total-managed">0</h2>
+            <h2 class="text-4xl font-bold dynamic-text mb-2" id="total-managed">0</h2>
+            <div class="flex justify-between items-center">
+                <p class="text-xs font-medium text-emerald-500" id="enabled-users">0 enabled</p>
+                <span
+                    class="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1 group-hover:text-indigo-500 transition-colors">
+                    Manage <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7"></path>
+                    </svg>
+                </span>
+            </div>
+        </div>
+        <div class="stat-card cursor-pointer group" onclick="showSystemAlerts()">
+            <div class="flex justify-between items-center mb-4">
+                <p
+                    class="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-rose-500 transition-colors">
+                    Open Alerts</p>
+                <div
+                    class="p-2 bg-rose-500/10 rounded-lg text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                        </path>
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-4xl font-bold dynamic-text mb-2 text-rose-500" id="open-alerts">0</h2>
+            <p class="text-xs font-medium text-rose-500/80">Needs attention</p>
         </div>
     </div>
 
-    <!-- Master Table -->
-    <div class="table-container shadow-2xl">
-        <div class="p-8 border-b border-slate-700/10 flex justify-between items-center">
-            <h3 class="text-xl font-bold dynamic-text">Ecosystem Directory</h3>
-            <button onclick="loadAdminStats()"
-                class="p-3 bg-slate-500/5 rounded-xl hover:bg-slate-500/10 transition-all group">
-                <svg class="w-5 h-5 text-indigo-500 group-hover:rotate-180 transition-transform duration-500"
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
-                    </path>
-                </svg>
+    <!-- Layout Tabs & Filters matching the screenshot -->
+    <div class="flex flex-col gap-4 mb-6">
+        <!-- Tabs -->
+        <div class="flex items-center gap-2 border-b border-slate-700/10 pb-4">
+            <button
+                class="px-5 py-2 font-semibold text-sm rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                Organizations
+            </button>
+            <button
+                class="px-5 py-2 font-medium text-sm rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition">
+                User activity
+            </button>
+            <button onclick="showSystemAlerts()"
+                class="px-5 py-2 font-medium text-sm rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition flex items-center">
+                Alerts <span
+                    class="bg-rose-100 text-rose-600 dark:bg-rose-500/20 px-2 py-0.5 rounded-full text-[10px] font-bold ml-2"
+                    id="tab-alert-count">0</span>
             </button>
         </div>
-        <div class="overflow-x-auto min-h-[400px]">
-            <table class="w-full">
-                <thead>
-                    <tr>
-                        <th class="pl-10">Organization Name</th>
-                        <th>Organization Type</th>
-                        <th>Admin</th>
-                        <th>Active Members</th>
-                        <th class="text-right pr-10">Onboarded</th>
-                    </tr>
-                </thead>
-                <tbody id="org-tbody">
-                    <!-- Row injection -->
-                </tbody>
-            </table>
+
+        <!-- Filters -->
+        <div class="flex flex-col sm:flex-row gap-4 items-center">
+            <div class="relative flex-1 w-full">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <input type="text" id="search-org" oninput="filterOrgs()" placeholder="Search organization..."
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition">
+            </div>
+            <div class="flex gap-4 w-full sm:w-auto">
+                <select id="filter-status" onchange="filterOrgs()"
+                    class="w-full sm:w-40 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 appearance-none">
+                    <option value="">Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
         </div>
+    </div>
+
+    <!-- Ecosystem Directory - Card based matching screenshot -->
+    <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold dynamic-text">Ecosystem Directory</h3>
+        <button onclick="loadAdminStats()"
+            class="p-3 bg-slate-500/5 rounded-xl hover:bg-slate-500/10 transition-all group">
+            <svg class="w-5 h-5 text-indigo-500 group-hover:rotate-180 transition-transform duration-500" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                </path>
+            </svg>
+        </button>
+    </div>
+
+    <div id="org-list-container" class="space-y-3 min-h-[400px]">
+        <!-- List injection -->
+        <div class="py-20 text-center text-slate-500 italic">Scanning Ecosystem...</div>
+    </div>
+
+    <!-- Support Floating Widget -->
+    <div class="support-widget" id="support-section">
+        <div class="support-label">Need assistance?</div>
+        <a href="/helpdesk/tickets" target="_blank" class="support-btn" id="helpdesk-link">
+            <svg viewBox="0 0 118 118" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-10 h-10">
+                <path
+                    d="M93.9278 0H23.1013C10.3428 0 0 10.3428 0 23.1013V93.9278C0 106.686 10.3428 117.029 23.1013 117.029H93.9278C106.686 117.029 117.029 106.686 117.029 93.9278V23.1013C117.029 10.3428 106.686 0 93.9278 0Z"
+                    fill="#7D42FB" />
+                <path
+                    d="M95.9759 50.8753V27.8265L21 27.8265V38.3271H85.5278V48.3027C81.3275 49.5103 78.2824 53.3955 78.2824 57.9632C78.2824 62.531 81.3275 66.3637 85.5278 67.5713V77.5468H31.5006V50.1403H21V88.0474H96.0284V64.9986L89.7805 60.5359V55.3906L96.0284 50.9278L95.9759 50.8753Z"
+                    fill="#EDF7FF" />
+            </svg>
+        </a>
     </div>
 </main>
 {% endblock %}
 
 {% block script %}
 <script>
-    // Strict Auth Check - Should be first
-    if (typeof frappe !== 'undefined' && frappe.session.user === "Guest") {
-        window.location.href = "/login";
+    let growthChart = null;
+    let planChart = null;
+
+    let currentChartType = 'line';
+    let lastGrowthData = null;
+
+    function showOrgGrowthChart() {
+        document.getElementById('chart-modal').style.display = 'flex';
+
+        frappe.call({
+            method: 'app.api.get_org_growth_data',
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    lastGrowthData = r.message.data;
+                    renderGrowthChart(lastGrowthData);
+                    renderPlanChart(r.message.plans);
+                    updateKPIs(lastGrowthData, r.message.plans);
+                }
+            }
+        });
     }
+
+    function updateKPIs(data, plans) {
+        const total = data.values.reduce((a, b) => a + b, 0);
+        const avg = data.year_avg || 0;
+        const peakIdx = data.values.indexOf(Math.max(...data.values));
+        const peak = peakIdx >= 0 ? data.labels[peakIdx] : '—';
+        document.getElementById('kpi-total').innerText = total;
+        document.getElementById('kpi-avg').innerText = avg;
+        document.getElementById('kpi-peak').innerText = peak;
+        document.getElementById('doughnut-total').innerText = plans.values.reduce((a, b) => a + b, 0);
+    }
+
+    function switchChartType(type) {
+        currentChartType = type;
+        document.getElementById('btn-line').className = `px-3 py-1 text-[10px] font-bold uppercase transition-all ${type === 'line' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:bg-white/5'}`;
+        document.getElementById('btn-bar').className = `px-3 py-1 text-[10px] font-bold uppercase transition-all ${type === 'bar' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:bg-white/5'}`;
+        if (lastGrowthData) renderGrowthChart(lastGrowthData);
+    }
+
+    function closeChartModal() {
+        document.getElementById('chart-modal').style.display = 'none';
+        if (growthChart) growthChart.destroy();
+        if (planChart) planChart.destroy();
+        growthChart = null;
+        planChart = null;
+    }
+
+    function renderPlanChart(data) {
+        const ctx = document.getElementById('planChart').getContext('2d');
+        if (planChart) planChart.destroy();
+
+        const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#f43f5e'];
+
+        planChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: colors,
+                    hoverBackgroundColor: colors.map(c => c + 'dd'),
+                    borderWidth: 3,
+                    borderColor: 'transparent',
+                    hoverBorderColor: '#ffffff',
+                    hoverOffset: 20
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                animation: { animateScale: true, animateRotate: true, duration: 1200, easing: 'easeInOutQuart' },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#9ca3af',
+                            font: { family: 'Inter', size: 10, weight: '600' },
+                            padding: 16,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                        borderColor: 'rgba(255,255,255,0.08)',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 12,
+                        titleColor: '#f9fafb',
+                        bodyColor: '#9ca3af',
+                        callbacks: {
+                            label: ctx => ` ${ctx.parsed} orgs  (${Math.round(ctx.parsed / ctx.dataset.data.reduce((a, b) => a + b, 0) * 100)}%)`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderGrowthChart(data) {
+        const ctx = document.getElementById('growthChart').getContext('2d');
+        if (growthChart) growthChart.destroy();
+
+        const isBar = currentChartType === 'bar';
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, 340);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.35)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+
+        growthChart = new Chart(ctx, {
+            type: currentChartType,
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'New Organizations',
+                    data: data.values,
+                    borderColor: '#6366f1',
+                    borderWidth: isBar ? 0 : 3,
+                    borderRadius: isBar ? 8 : 0,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: isBar ? 0 : 6,
+                    pointHoverRadius: isBar ? 0 : 10,
+                    tension: 0.45,
+                    fill: !isBar,
+                    backgroundColor: isBar ? 'rgba(99,102,241,0.7)' : gradient
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                animation: { duration: 900, easing: 'easeInOutQuart' },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                        borderColor: 'rgba(255,255,255,0.08)',
+                        borderWidth: 1,
+                        padding: 14,
+                        cornerRadius: 14,
+                        titleColor: '#f9fafb',
+                        titleFont: { family: 'Outfit', size: 13, weight: '700' },
+                        bodyColor: '#9ca3af',
+                        bodyFont: { family: 'Inter', size: 11 },
+                        callbacks: {
+                            title: items => items[0].label,
+                            label: ctx => ` ${ctx.parsed.y} new org${ctx.parsed.y !== 1 ? 's' : ''}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+                        ticks: {
+                            color: '#9ca3af',
+                            font: { family: 'Inter', size: 10 },
+                            precision: 0,
+                            stepSize: 1
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#9ca3af', font: { family: 'Inter', size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    function closeAlertsModal() {
+        document.getElementById('alerts-modal').style.display = 'none';
+        loadAdminStats(); // Refresh badge counts
+    }
+
+    function showSystemAlerts() {
+        document.getElementById('alerts-modal').style.display = 'flex';
+        const container = document.getElementById('alerts-list-container');
+
+        frappe.call({
+            method: 'app.api.get_system_alerts',
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    const alerts = r.message.alerts;
+                    if (alerts.length === 0) {
+                        container.innerHTML = '<div class="py-10 text-center text-slate-500 italic">No new alerts. Your system is healthy.</div>';
+                    } else {
+                        container.innerHTML = alerts.map(a => `
+                            <div class="p-5 bg-slate-500/5 rounded-2xl border border-white/5 flex justify-between items-center group transition-all hover:bg-slate-500/10">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="w-2 h-2 rounded-full bg-rose-500 shadow-lg shadow-rose-500/20"></span>
+                                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">${a.alert_type}</p>
+                                    </div>
+                                    <p class="font-bold dynamic-text text-sm">${a.message}</p>
+                                    <p class="text-[10px] text-slate-500 font-medium mt-1">${new Date(a.creation).toLocaleString()}</p>
+                                </div>
+                                <button onclick="markAlertRead('${a.name}')" class="p-2 border border-slate-500/10 rounded-xl hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        `).join('');
+                    }
+                }
+            }
+        });
+    }
+
+    function markAlertRead(alertId) {
+        frappe.call({
+            method: 'app.api.mark_alert_as_read',
+            args: { alert_id: alertId },
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    showSystemAlerts(); // Refresh list
+                }
+            }
+        });
+    }
+
+
 
     const savedTheme = localStorage.getItem('nu_admin_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -382,15 +1055,6 @@
 
     // Start initialization with a small delay for the framework browser sync
     setTimeout(initDashboard, 300);
-
-    function logoutAdmin() {
-        frappe.call({
-            method: "logout",
-            callback: function (r) {
-                window.location.href = "/login";
-            }
-        });
-    }
 
     function toggleTheme() {
         const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -411,85 +1075,282 @@
     // Initial icon update
     document.addEventListener('DOMContentLoaded', () => updateThemeIcons(savedTheme));
 
+    let globalOrgsData = [];
+
     async function loadAdminStats() {
-        // Prevent double loading if already in progress or has data
-        const tbody = document.getElementById('org-tbody');
-        if (tbody.getAttribute('data-loading') === 'true') return;
+        const container = document.getElementById('org-list-container');
+        if (!container) return;
+        if (container.getAttribute('data-loading') === 'true') return;
 
         const btn = document.querySelector('button[onclick="loadAdminStats()"] svg');
         if (btn) btn.classList.add('animate-spin');
 
-        if (tbody.innerHTML.trim() === '' || tbody.innerHTML.includes('Scanning')) {
-            tbody.innerHTML = '<tr><td colspan="5" class="py-20 text-center text-slate-500 italic">Scanning Ecosystem...</td></tr>';
-        }
-
-        tbody.setAttribute('data-loading', 'true');
+        container.setAttribute('data-loading', 'true');
 
         frappe.call({
             method: 'app.api.get_admin_stats',
             callback: function (r) {
-                tbody.setAttribute('data-loading', 'false');
+                container.setAttribute('data-loading', 'false');
                 if (btn) btn.classList.remove('animate-spin');
                 if (r.message && r.message.status === 'success') {
-                    renderOrgs(r.message.organizations);
+                    globalOrgsData = r.message.organizations;
+                    renderOrgs(globalOrgsData);
                 } else if (r.exc) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="py-20 text-center text-red-500 italic">Telemetry Access Denied</td></tr>';
+                    container.innerHTML = '<div class="py-20 text-center text-red-500 italic">Telemetry Access Denied</div>';
                 }
             }
         });
     }
 
+    function filterOrgs() {
+        const query = document.getElementById('search-org').value.toLowerCase();
+        const filterStatus = document.getElementById('filter-status').value;
+        const filtered = globalOrgsData.filter(o => {
+            const matchesQuery = (o.organization_name || '').toLowerCase().includes(query) ||
+                (o.work_email || '').toLowerCase().includes(query);
+
+            let matchesStatus = true;
+            if (filterStatus === 'Active') {
+                matchesStatus = (o.approval_status === 'Approved');
+            } else if (filterStatus === 'Inactive') {
+                matchesStatus = (o.approval_status !== 'Approved');
+            }
+
+            return matchesQuery && matchesStatus;
+        });
+        renderOrgs(filtered);
+    }
+
+    function getInitials(name) {
+        if (!name) return '??';
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+    }
+
     function renderOrgs(orgs) {
-        const tbody = document.getElementById('org-tbody');
-        tbody.innerHTML = '';
+        const container = document.getElementById('org-list-container');
+        if (!container) return;
+        container.innerHTML = '';
         let uCount = 0;
+        let enabledCount = 0;
+        let activeCount = 0;
+
         document.getElementById('total-orgs').innerText = orgs.length;
+
+        frappe.call({
+            method: 'app.api.get_system_alerts',
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    const alertsCount = r.message.alerts.length;
+                    document.getElementById('open-alerts').innerText = alertsCount;
+                    document.getElementById('tab-alert-count').innerText = alertsCount;
+                }
+            }
+        });
 
         orgs.forEach(o => {
             uCount += o.member_count;
-            tbody.innerHTML += `
-                <tr class="org-row group" onclick="toggleMembers('${o.name}')">
-                    <td class="pl-10">
-                        <p class="font-semibold dynamic-text text-sm group-hover:text-indigo-500 transition-colors">${o.organization_name}</p>
-                    </td>
-                    <td><span class="p-badge badge-indigo text-[10px]">${o.organization_type}</span></td>
-                    <td>
-                        <p class="font-medium text-sm dynamic-text">${o.admin_name}</p>
-                        <p class="text-[11px] text-slate-500">${o.work_email}</p>
-                    </td>
-                    <td>
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold dynamic-text text-sm">${o.member_count}</span>
-                            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-40">Users</span>
+            enabledCount += (o.enabled_count || 0);
+            if (o.approval_status === 'Approved') activeCount++;
+
+            const initials = getInitials(o.organization_name);
+            const creationDate = new Date(o.creation);
+            const joinedStr = `Joined ${creationDate.toLocaleString('default', { month: 'short' })} ${creationDate.getFullYear()}`;
+
+            const capacity = parseInt(o.number_of_users) || 5;
+            const usagePercent = Math.min((o.member_count / capacity) * 100, 100);
+            const barColor = usagePercent > 80 ? '#f43f5e' : (usagePercent > 40 ? '#f59e0b' : '#10b981');
+            const statusClass = o.approval_status === 'Approved' ? 'status-active' : (o.approval_status === 'Pending Approval' ? 'status-trial' : 'status-suspended');
+            const statusLabel = o.approval_status || 'Pending Approval';
+
+            container.innerHTML += `
+                <div class="org-card group hover:bg-slate-50 dark:hover:bg-slate-800/50" onclick="toggleMembers('${o.name}')">
+                    <div class="flex items-center gap-5 min-w-[300px]">
+                        <div class="avatar-circle">
+                            ${initials}
                         </div>
-                    </td>
-                    <td class="text-right pr-10">
-                        <p class="font-semibold dynamic-text text-sm">${new Date(o.creation).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
-                        <p class="text-[10px] text-slate-500 font-medium">${new Date(o.creation).getFullYear()}</p>
-                    </td>
-                </tr>
-                <tr id="sub-row-${o.name}" class="hidden inspect-panel">
-                    <td colspan="5" class="p-0 bg-slate-500/5">
-                        <div class="p-8 border-y border-indigo-500/10">
-                            <div class="flex justify-between items-center mb-6">
-                                <h4 class="text-[11px] font-bold uppercase tracking-widest text-indigo-500 flex items-center gap-3">
-                                    <span class="w-6 h-[2px] bg-indigo-500/40"></span>
-                                    Organization Directory
-                                </h4>
-                                <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                                    Verified Personnel
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <p class="font-bold dynamic-text group-hover:text-indigo-500 transition-colors uppercase tracking-tight">${o.organization_name}</p>
+                                <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-bold text-slate-500 uppercase tracking-widest border border-slate-200 dark:border-slate-700">Admin</span>
+                            </div>
+                            <p class="text-[12px] text-slate-500">${o.work_email} • ${joinedStr}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end flex-1 gap-6">
+                        <div class="hidden md:flex">
+                            <span class="p-badge plan-badge text-[10px] uppercase tracking-wide px-3 py-1 ring-1 ring-inset ring-indigo-500/10">${o.organization_type || 'Starter'}</span>
+                        </div>
+                        
+                        <div class="relative group/status flex items-center">
+                            <div class="cursor-pointer" onclick="event.stopPropagation(); toggleStatusDropdown('${o.name}')">
+                                <span class="p-badge ${statusClass} text-[10px] font-bold uppercase tracking-wide px-3 py-1 transition-all hover:opacity-80 flex items-center gap-2" id="status-label-${o.name}">
+                                    ${statusLabel}
+                                    <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                                </span>
+                            </div>
+                            <div id="dropdown-${o.name}" class="status-dropdown status-menu-container">
+                                ${o.approval_status === 'Pending Approval' ? `
+                                <div class="dropdown-item active-opt" onclick="event.stopPropagation(); updateOrgStatus('${o.name}', 'Approved')">
+                                    Approve 
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                 </div>
-                            </div>
-                            <div id="members-list-${o.name}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <!-- Members -->
+                                <div class="dropdown-item" style="color: #f59e0b" onclick="event.stopPropagation(); updateOrgStatus('${o.name}', 'Pending Approval')">
+                                    Pending Approval
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                </div>
+                                ` : `
+                                <div class="dropdown-item active-opt" onclick="event.stopPropagation(); updateOrgStatus('${o.name}', 'Approved')">
+                                    Approve 
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                </div>
+                                <div class="dropdown-item disable-opt" onclick="event.stopPropagation(); updateOrgStatus('${o.name}', 'Rejected')">
+                                    Reject
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                </div>
+                                `}
                             </div>
                         </div>
-                    </td>
-                </tr>
+
+                        <div class="flex items-center gap-4">
+                            <p class="text-[12px] font-bold text-slate-600 dark:text-slate-400 min-w-[80px] text-right">${o.member_count}/${capacity} seats</p>
+                            <div class="progress-track w-24">
+                                <div class="progress-fill" style="width: ${usagePercent}%; background: ${barColor}"></div>
+                            </div>
+                        </div>
+
+                        <svg class="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <div id="sub-row-${o.name}" class="hidden inspect-panel mb-4 overflow-hidden rounded-2xl border border-indigo-500/10 bg-slate-500/5">
+                    <div class="p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="text-[11px] font-bold uppercase tracking-widest text-indigo-500 flex items-center gap-3">
+                                <span class="w-6 h-[2px] bg-indigo-500/40"></span>
+                                Member Directory: ${o.organization_name}
+                            </h4>
+                        </div>
+                        <div id="members-list-${o.name}" class="flex flex-col gap-3">
+                            <div class="py-10 text-center text-xs italic text-slate-500">Loading members...</div>
+                        </div>
+                    </div>
+                </div>
             `;
         });
+
         document.getElementById('total-managed').innerText = uCount;
+
+        // Populate new cards with some relative data
+        const activeOrgsEl = document.getElementById('active-orgs');
+        if (activeOrgsEl) activeOrgsEl.innerText = `${activeCount} active`;
+
+        const enabledUsersEl = document.getElementById('enabled-users');
+        if (enabledUsersEl) enabledUsersEl.innerText = `${enabledCount} enabled`;
+    }
+
+    async function updateOrgStatus(orgId, status) {
+        const label = document.getElementById(`status-label-${orgId}`);
+        const dropdown = document.getElementById(`dropdown-${orgId}`);
+
+        if (dropdown) dropdown.style.display = 'none';
+
+        // Optimistic UI update
+        if (label) {
+            const oldLabel = label.innerText;
+            const oldClass = label.className;
+            const isActive = status === 'Approved';
+
+            label.innerHTML = `
+                ${status}
+                <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+            `;
+            label.className = `p-badge text-[10px] font-bold uppercase tracking-wide px-3 py-1 transition-all flex items-center gap-2 ${isActive ? 'status-active' : (status === 'Pending Approval' ? 'status-trial' : 'status-suspended')}`;
+
+            frappe.call({
+                method: 'app.api.toggle_registration_status',
+                args: { registration_id: orgId, status: status },
+                callback: function (r) {
+                    if (r.message && r.message.status === 'success') {
+                        frappe.show_alert({ message: r.message.message, indicator: 'green' });
+                        loadAdminStats(); // Refresh stats
+                    } else {
+                        frappe.show_alert({ message: 'Status update failed', indicator: 'red' });
+                        // Revert UI on failure
+                        if (label) {
+                            label.innerHTML = `
+                                ${oldLabel}
+                                <svg class="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                            `;
+                            label.className = oldClass;
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function toggleStatusDropdown(orgId) {
+        const dropdown = document.getElementById(`dropdown-${orgId}`);
+        const allDropdowns = document.querySelectorAll('.status-dropdown');
+
+        const isVisible = dropdown.style.display === 'block';
+
+        allDropdowns.forEach(d => d.style.display = 'none');
+
+        if (!isVisible) {
+            dropdown.style.display = 'block';
+        }
+    }
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.status-menu-container') && !e.target.closest('.p-badge')) {
+            document.querySelectorAll('.status-dropdown').forEach(d => d.style.display = 'none');
+        }
+    });
+
+    function toggleUserDropdown(safeId) {
+        const dropdown = document.getElementById(`user-dropdown-${safeId}`);
+        const isVisible = dropdown.style.display === 'block';
+        document.querySelectorAll('.status-dropdown').forEach(d => d.style.display = 'none');
+        if (!isVisible) dropdown.style.display = 'block';
+    }
+
+    function updateUserStatus(email, orgId, status, safeId) {
+        const dropdown = document.getElementById(`user-dropdown-${safeId}`);
+        const btn = document.getElementById(`user-access-btn-${safeId}`);
+        const badge = document.getElementById(`user-status-${safeId}`);
+        if (dropdown) dropdown.style.display = 'none';
+
+        const isEnabled = status === 'Approved';
+
+        // Optimistic UI
+        if (btn) {
+            btn.className = `px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wide border transition-all flex items-center gap-1.5 ${isEnabled ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' : 'border-rose-500/30 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20'}`;
+            btn.innerHTML = `${isEnabled ? 'Enabled' : 'Disabled'} <svg class="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>`;
+        }
+        if (badge) {
+            badge.className = `p-badge ${isEnabled ? 'badge-success' : 'badge-indigo'} !text-[9px] uppercase tracking-wide px-3 py-1 ring-1 ring-inset ${isEnabled ? 'ring-emerald-500/20' : 'ring-indigo-500/20'}`;
+            badge.innerText = isEnabled ? 'Active' : 'Disabled';
+        }
+
+        frappe.call({
+            method: 'app.api.update_member_status',
+            args: { registration_id: orgId, email: email, status: status },
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    frappe.show_alert({ message: r.message.message, indicator: 'green' });
+                } else {
+                    frappe.show_alert({ message: r.message?.message || 'Update failed', indicator: 'red' });
+                    // Reload to revert on failure
+                    toggleMembers(orgId);
+                    toggleMembers(orgId);
+                }
+            }
+        });
     }
 
     async function toggleMembers(orgId) {
@@ -506,17 +1367,63 @@
                 const list = document.getElementById(`members-list-${orgId}`);
                 if (r.message && r.message.status === 'success') {
                     const users = r.message.users;
-                    list.innerHTML = users.length === 0 ? '<div class="col-span-3 py-10 text-center text-xs italic text-slate-500">No members registered yet.</div>' :
-                        users.map(u => `
-                            <div class="p-4 bg-white/5 border border-white/5 rounded-xl transition-all hover:border-indigo-500/30">
-                                <p class="font-bold text-sm dynamic-text">${u.name}</p>
-                                <p class="text-[11px] text-slate-500 font-medium truncate mb-3">${u.email}</p>
-                                <div class="flex justify-between items-center">
-                                    <span class="p-badge ${u.status === 'Approved' ? 'badge-success' : 'badge-indigo'} !text-[9px] uppercase tracking-wide">${u.status}</span>
-                                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-tighter opacity-60">${new Date(u.creation).toLocaleDateString()}</span>
+                    list.innerHTML = users.length === 0 ? '<div class="py-10 text-center text-xs italic text-slate-500">No members registered yet.</div>' :
+                        users.map(u => {
+                            const isEnabled = u.status === 'Approved';
+                            const safeId = u.email.replace(/[^a-zA-Z0-9]/g, '_');
+                            return `
+                            <div class="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl transition-all hover:bg-slate-500/10 hover:border-indigo-500/30 group/user" id="user-row-${safeId}">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-bold text-xs uppercase shadow-sm border border-indigo-500/20 group-hover/user:bg-indigo-500 group-hover/user:text-white transition-all">
+                                        ${getInitials(u.full_name || u.name)}
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-sm dynamic-text uppercase tracking-tight">${u.full_name || u.name}</p>
+                                        <p class="text-[11px] text-slate-500 font-medium truncate">${u.email}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        `).join('');
+                                <div class="flex items-center gap-8">
+                                    <div class="hidden md:block">
+                                        <p class="text-[10px] font-bold text-slate-500/60 uppercase tracking-widest mb-1.5">Status</p>
+                                        <span class="p-badge ${isEnabled ? 'badge-success' : (u.status === 'Pending Approval' ? 'bg-amber-500/10 text-amber-500 ring-amber-500/20' : 'badge-indigo')} !text-[9px] uppercase tracking-wide px-3 py-1 ring-1 ring-inset ${isEnabled ? 'ring-emerald-500/20' : ''}" id="user-status-${safeId}">
+                                            ${u.status || 'Pending Approval'}
+                                        </span>
+                                    </div>
+                                    <div class="text-right min-w-[90px]">
+                                        <p class="text-[10px] font-bold text-slate-500/60 uppercase tracking-widest mb-1.5">Joined</p>
+                                        <span class="text-[11px] font-bold dynamic-text tabular-nums opacity-80">
+                                            ${new Date(u.creation).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </span>
+                                    </div>
+                                    <div class="relative flex-shrink-0">
+                                        <p class="text-[10px] font-bold text-slate-500/60 uppercase tracking-widest mb-1.5">Access</p>
+                                        <button onclick="event.stopPropagation(); toggleUserDropdown('${safeId}')"
+                                            id="user-access-btn-${safeId}"
+                                            class="px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wide border transition-all flex items-center gap-1.5 ${isEnabled ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' : (u.status === 'Pending Approval' ? 'border-amber-500/30 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20' : 'border-rose-500/30 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20')}">
+                                            ${u.status || 'Pending Approval'}
+                                            <svg class="w-2.5 h-2.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                                        </button>
+                                        <div id="user-dropdown-${safeId}" class="status-dropdown status-menu-container" style="right:0; min-width:130px;">
+                                            ${u.status === 'Pending Approval' ? `
+                                            <div class="dropdown-item active-opt" onclick="event.stopPropagation(); updateUserStatus('${u.email}', '${orgId}', 'Approved', '${safeId}')">
+                                                Approve <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            </div>
+                                            <div class="dropdown-item" style="color: #f59e0b" onclick="event.stopPropagation(); updateUserStatus('${u.email}', '${orgId}', 'Pending Approval', '${safeId}')">
+                                                Pending Approval <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                            </div>
+                                            ` : `
+                                            <div class="dropdown-item active-opt" onclick="event.stopPropagation(); updateUserStatus('${u.email}', '${orgId}', 'Approved', '${safeId}')">
+                                                Approve <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            </div>
+                                            <div class="dropdown-item disable-opt" onclick="event.stopPropagation(); updateUserStatus('${u.email}', '${orgId}', 'Rejected', '${safeId}')">
+                                                Reject <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                            </div>
+                                            `}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }).join('');
                 }
             }
         });
