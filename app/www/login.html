@@ -210,6 +210,25 @@
                     Return to Login
                 </button>
             </div>
+
+            <!-- Redirect View -->
+            <div id="redirect-view" style="display: none;" class="text-center py-6">
+                <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-8 h-8 text-[#5CB9CE] animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-xl font-bold text-slate-900 mb-4">Account Verified</h2>
+                <div class="space-y-2">
+                    <p class="text-sm text-slate-500 leading-relaxed max-w-xs mx-auto">
+                        This portal is for administrators.
+                    </p>
+                    <p class="text-sm font-semibold text-[#5CB9CE] leading-relaxed max-w-xs mx-auto">
+                        Redirecting to your user portal...
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </main>
@@ -230,15 +249,19 @@
         const login = document.getElementById('login-view');
         const forgot = document.getElementById('forgot-view');
         const success = document.getElementById('success-view');
+        const redirect = document.getElementById('redirect-view');
         
         login.style.display = 'none';
         forgot.style.display = 'none';
         success.style.display = 'none';
+        if (redirect) redirect.style.display = 'none';
 
         if (target === 'forgot') {
             forgot.style.display = 'block';
         } else if (target === 'success') {
             success.style.display = 'block';
+        } else if (target === 'redirect') {
+            if (redirect) redirect.style.display = 'block';
         } else {
             login.style.display = 'block';
         }
@@ -303,7 +326,16 @@
                     }
                     
                     console.log("Redirecting to:", target);
-                    window.location.href = target;
+
+                    // If redirecting to the external live portal, show the message first
+                    if (target.includes("live.nuomics.io")) {
+                        showView('redirect');
+                        setTimeout(function() {
+                            window.location.href = target;
+                        }, 2500); // 2.5 second delay
+                    } else {
+                        window.location.href = target;
+                    }
                 } else {
                     console.warn("Response received but not recognized as success:", r);
                     handleLoginError();

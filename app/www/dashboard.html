@@ -359,14 +359,13 @@
             </button>
 
             <div class="flex items-center gap-4">
+                {% set current_user = frappe.get_doc("User", frappe.session.user) %}
                 <div class="text-right">
-                    <p class="text-sm font-semibold dynamic-text leading-none">{{ reg.first_name }} {{ reg.last_name }}
-                    </p>
-                    <p class="text-[11px] text-slate-500">{{ reg.work_email }}</p>
+                    <p class="text-sm font-semibold dynamic-text leading-none">{{ current_user.full_name or current_user.name }}</p>
+                    <p class="text-[11px] text-slate-500">{{ current_user.email }}</p>
                 </div>
-                <div
-                    class="w-10 h-10 rounded-full bg-[#333A48] flex items-center justify-center font-bold text-white border border-slate-700">
-                    {{ reg.first_name[0] }}{{ reg.last_name[0] }}
+                <div class="w-10 h-10 rounded-full bg-[#333A48] flex items-center justify-center font-bold text-white border border-slate-700">
+                    {{ (current_user.full_name or current_user.name)[0] | upper }}{{ (current_user.full_name or current_user.name).split(' ')[1][0] | upper if ' ' in (current_user.full_name or current_user.name) else "" }}
                 </div>
             </div>
         </div>

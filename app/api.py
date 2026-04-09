@@ -666,7 +666,9 @@ def upload_org_users_csv(registration_id, file_url):
     else:
         file_path = frappe.get_site_path(file_url.lstrip("/"))
     capacity = get_user_capacity(registration_id)
-    current_count = frappe.db.count("User", {"organization": registration_id, "enabled": 1})
+    # Count members against the actual organization directory (child table)
+    # This prevents dangling User records from blocking legitimate imports.
+    current_count = frappe.db.count("Org User Item", {"parent": registration_id})
 
     if current_count >= capacity:
         return {"status": "error", "message": f"Organization Capacity reached. You have already utilized your limit of {capacity} users."}
@@ -674,6 +676,8 @@ def upload_org_users_csv(registration_id, file_url):
     inserted = 0
     skipped = 0
     org_doc = frappe.get_doc("User Registration", registration_id)
+    # Pre-fetch existing member emails to avoid duplicates in the same registration
+    existing_members = {m.email for m in org_doc.members}
     
     with open(file_path, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
@@ -681,33 +685,46 @@ def upload_org_users_csv(registration_id, file_url):
             email = row.get('email', '').strip()
             name = row.get('name', 'N/A')
             
-            if not email or frappe.db.exists("User", email):
+            if not email:
+                continue
+
+            # If they are already on the dashboard, skip them
+            if email in existing_members:
                 skipped += 1
                 continue
             
             if current_count + inserted >= capacity:
                 break
             
-            new_user = frappe.get_doc({
-                "doctype": "User",
-                "email": email,
-                "first_name": name,
-                "send_welcome_email": 0,
-                "enabled": 0,
-                "user_type": "Website User",
-                "organization": registration_id # ENSURE ISOLATION
-            })
-            new_user.insert(ignore_permissions=True)
+            # Handle user record existence
+            user_id = email
+            if not frappe.db.exists("User", email):
+                # Only create if the account doesn't exist at all
+                new_user = frappe.get_doc({
+                    "doctype": "User",
+                    "email": email,
+                    "first_name": name,
+                    "send_welcome_email": 0,
+                    "enabled": 0,
+                    "user_type": "Website User",
+                    "organization": registration_id
+                })
+                new_user.insert(ignore_permissions=True)
+                user_id = new_user.name
+            else:
+                # User exists but isn't on the dashboard - ensure they are tagged to this org
+                frappe.db.set_value("User", email, "organization", registration_id)
             
-            # Append to the child table
+            # Add to the child table (this makes them appear on the dashboard)
             org_doc.append("members", {
                 "name1": name,
                 "email": email,
-                "user_ref": new_user.name,
+                "user_ref": user_id,
                 "status": "Pending Approval"
             })
             
             inserted += 1
+            existing_members.add(email)
         
     org_doc.save(ignore_permissions=True)
     frappe.db.commit()
