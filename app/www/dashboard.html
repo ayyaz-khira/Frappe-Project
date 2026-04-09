@@ -562,6 +562,35 @@
         });
     }
 
+    async function toggleAdminStatus(email, isAdmin) {
+        const action = isAdmin ? 'promote to admin' : 'revoke admin access for';
+        if (!confirm(`Are you sure you want to ${action} ${email}?`)) return;
+
+        frappe.call({
+            method: 'app.api.toggle_org_user_admin',
+            args: {
+                registration_id: registrationId,
+                email: email,
+                is_admin: isAdmin
+            },
+            callback: function (r) {
+                if (r.message && r.message.status === 'success') {
+                    frappe.show_alert({
+                        message: r.message.message,
+                        indicator: 'indigo'
+                    });
+                    loadMembers(); 
+                } else {
+                    frappe.msgprint({
+                        title: 'Error',
+                        message: r.message ? r.message.message : "Request failed",
+                        indicator: 'red'
+                    });
+                }
+            }
+        });
+    }
+
     async function loadMembers() {
         if (!registrationId || registrationId === "None") return;
 
@@ -611,13 +640,29 @@
                 badgeClass = 'badge-danger';
             }
 
+            const isAdmin = parseInt(u.is_admin) === 1;
+            const adminBadge = isAdmin ? `<span class="ml-2 px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-[9px] font-bold rounded border border-indigo-500/30 uppercase tracking-tighter align-middle">Admin</span>` : '';
+
             tbody.innerHTML += `
                 <tr class="hover:bg-[#2e3a4755]">
-                    <td class="dynamic-text font-medium">${u.name}</td>
+                    <td class="dynamic-text font-medium">${u.name}${adminBadge}</td>
                     <td class="text-slate-500 font-normal">${u.email}</td>
                     <td><span class="badge ${badgeClass}">${u.status}</span></td>
                     <td class="text-right px-4">
+                        <div class="flex items-center justify-end gap-2">
                         ${u.status === 'Approved' ? `
+                            ${isAdmin ? `
+                                <button onclick="toggleAdminStatus('${u.email}', 0)" 
+                                    class="px-3 py-1 bg-amber-500/10 text-amber-500 text-[10px] font-bold rounded border border-amber-500/20 uppercase hover:bg-amber-500 hover:text-white transition-all shadow-sm">
+                                    Revoke
+                                </button>
+                            ` : `
+                                <button onclick="toggleAdminStatus('${u.email}', 1)" 
+                                    class="px-3 py-1 bg-indigo-500/10 text-indigo-500 text-[10px] font-bold rounded border border-indigo-500/20 uppercase hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
+                                    Make Admin
+                                </button>
+                            `}
+                            
                             <button onclick="updateMemberStatus('${u.email}', 'Rejected')" 
                                 class="px-3 py-1 bg-red-500/10 text-red-500 text-[10px] font-bold rounded border border-red-500/20 uppercase hover:bg-red-500 hover:text-white transition-all shadow-sm">
                                 Disable
@@ -628,6 +673,7 @@
                                 Enable
                             </button>
                         `}
+                        </div>
                     </td>
                 </tr>
             `;

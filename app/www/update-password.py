@@ -6,8 +6,8 @@ def get_context(context):
     key = frappe.form_dict.get('key')
     
     if not key:
-        frappe.local.flags.redirect_location = "/login"
-        raise frappe.Redirect
+        frappe.local.status_code = 404
+        raise frappe.PageDoesNotExistError
     
     # Optionally, we could verify the key here, but the standard 
     # frappe.core.doctype.user.user.update_password method will handle verification on submit.

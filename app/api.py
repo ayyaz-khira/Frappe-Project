@@ -70,6 +70,9 @@ def validate_org_admin_route():
     # Always allow essential system assets and API calls
     if any(path.startswith(p) for p in ["api/", "assets/", "files/", "private/", "socket.io"]):
         return
+    
+    # Debug log for path
+    # frappe.log_error(title="Path Check", message=f"User: {frappe.session.user} | Path: {path}")
 
     roles = frappe.get_roles()
     is_manager = "System Manager" in roles or frappe.session.user == "Administrator"
@@ -83,7 +86,7 @@ def validate_org_admin_route():
     if "Organization Admin" in roles and not is_manager:
         allowed_routes = [
             "", "dashboard", "contact-us", "login", "helpdesk", 
-            "logout", "me", "error", "404", "home"
+            "logout", "me", "error", "404", "home", "update-password"
         ]
         
         is_allowed = False
@@ -131,8 +134,9 @@ def redirect_after_login(login_manager):
         frappe.local.response["redirect_to"] = "/dashboard"
         return
 
-    # If they are neither Organization Admin, System Manager, nor Administrator
-    frappe.throw("You do not have permission to access the dashboard.")
+    # Allow everyone else (members/guests) to proceed without custom redirection.
+    # The individual pages (like /dashboard) handle their own role checks.
+    return 
 
     
 
@@ -769,6 +773,53 @@ def update_member_status(registration_id, email, status):
     else:
         return {"status": "error", "message": "Member not found in your organization record."}
 
+@frappe.whitelist()
+def toggle_org_user_admin(registration_id, email, is_admin):
+    validate_org_access(registration_id)
+    if not registration_id or not email:
+        return {"status": "error", "message": "Missing required information"}
+
+    # 1. Update the User record roles
+    if frappe.db.exists("User", email):
+        # We use a direct SQL insert for roles to bypass any potential User validation/permission blocks
+        if int(is_admin) == 1:
+            if not frappe.db.exists("Has Role", {"parent": email, "role": "Organization Admin"}):
+                h_role = frappe.get_doc({
+                    "doctype": "Has Role",
+                    "parent": email,
+                    "parentfield": "roles",
+                    "parenttype": "User",
+                    "role": "Organization Admin"
+                })
+                h_role.insert(ignore_permissions=True)
+                
+            # Ensure the user is enabled
+            frappe.db.set_value("User", email, "enabled", 1)
+        else:
+            frappe.db.sql("DELETE FROM `tabHas Role` WHERE parent=%s AND role='Organization Admin'", email)
+
+    # 2. Update the child table field for UI persistence
+    org_doc = frappe.get_doc("User Registration", registration_id)
+    user_found = False
+    for m in org_doc.members:
+        if m.email == email:
+            m.is_admin = int(is_admin)
+            if int(is_admin) == 1:
+                m.status = "Approved" # Auto-approve if they are being made admin
+            user_found = True
+            break
+            
+    if user_found:
+        org_doc.save(ignore_permissions=True)
+        frappe.db.commit()
+        
+        # Clear all possible caches for this user
+        frappe.clear_cache(user=email)
+        
+        return {"status": "success", "message": f"User admin status {'enabled' if int(is_admin) == 1 else 'disabled'}."}
+    else:
+        return {"status": "error", "message": "Member not found in your organization record."}
+
 
 @frappe.whitelist()
 def get_org_users(registration_id):
@@ -781,7 +832,7 @@ def get_org_users(registration_id):
     org_email = org_doc.get("work_email")
     
     members = frappe.get_all("Org User Item", 
-        fields=["name1 as name", "email", "status", "creation"], 
+        fields=["name1 as name", "email", "status", "creation", "is_admin"], 
         filters={"parent": registration_id, "parenttype": "User Registration"},
         order_by="creation desc"
     )
