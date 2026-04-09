@@ -294,11 +294,14 @@
                                  (r && !r.exc && !r._server_messages);
 
                 if (isSuccess) {
-                    // Redirect to message or fallback to dashboard
-                    let target = "/dashboard";
-                    if (typeof r.message === "string" && r.message.startsWith("/")) {
+                    // Redirect to server-provided target (prioritize redirect_to) or fallback to /dashboard
+                    let target = r.redirect_to || "/dashboard";
+                    
+                    // If message contains a URL, use it (handles cases where server sends URL in message)
+                    if (typeof r.message === "string" && (r.message.startsWith("/") || r.message.startsWith("http"))) {
                         target = r.message;
                     }
+                    
                     console.log("Redirecting to:", target);
                     window.location.href = target;
                 } else {

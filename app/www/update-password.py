@@ -5,10 +5,13 @@ def get_context(context):
     # This prevents users from navigating directly to /update-password without a reset link.
     key = frappe.form_dict.get('key')
     
-    if not key:
+    if not key or not frappe.db.exists("User", {"reset_password_key": key}):
         frappe.local.status_code = 404
         raise frappe.PageDoesNotExistError
     
+    # Optionally, we could verify the key here, but the standard 
+    # frappe.core.doctype.user.user.update_password method will handle verification on submit.
+    # To keep it lightweight, we just ensure the parameter exists.
     # Optionally, we could verify the key here, but the standard 
     # frappe.core.doctype.user.user.update_password method will handle verification on submit.
     # To keep it lightweight, we just ensure the parameter exists.

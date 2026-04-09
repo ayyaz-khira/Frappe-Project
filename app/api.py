@@ -62,13 +62,19 @@ def validate_org_admin_route():
     Restricts non-manager users from administrative routes and 
     sandboxes 'Organization Admin' users to specific allowed paths.
     """
-    if frappe.session.user == "Guest":
-        return
-
     path = frappe.request.path.strip("/")
     
     # Always allow essential system assets and API calls
     if any(path.startswith(p) for p in ["api/", "assets/", "files/", "private/", "socket.io"]):
+        return
+
+    # Strictly protect the update-password route: must have a key parameter
+    if path == "update-password":
+        if not frappe.form_dict.get('key'):
+            frappe.local.status_code = 404
+            raise frappe.PageDoesNotExistError
+
+    if frappe.session.user == "Guest":
         return
     
     # Debug log for path
@@ -124,19 +130,26 @@ def redirect_after_login(login_manager):
 
     # Route System Managers to the new Ecosystem Admin Dashboard
     if "System Manager" in roles:
-        frappe.cache.hset("redirect_after_login", user, "/admin-dashboard")
-        frappe.local.response["redirect_to"] = "/admin-dashboard"
+        target = "/admin-dashboard"
+        frappe.cache.hset("redirect_after_login", user, target)
+        frappe.local.response["redirect_to"] = target
+        frappe.local.response["message"] = target
         return
 
     # Route Organization Admins to their specific portal dashboard
     if "Organization Admin" in roles:
-        frappe.cache.hset("redirect_after_login", user, "/dashboard")
-        frappe.local.response["redirect_to"] = "/dashboard"
+        target = "/dashboard"
+        frappe.cache.hset("redirect_after_login", user, target)
+        frappe.local.response["redirect_to"] = target
+        frappe.local.response["message"] = target
         return
 
-    # Allow everyone else (members/guests) to proceed without custom redirection.
-    # The individual pages (like /dashboard) handle their own role checks.
-    return 
+    # Normal Organization Users (Members) are redirected to the live portal
+    target = "http://live.nuomics.io"
+    frappe.cache.hset("redirect_after_login", user, target)
+    frappe.local.response["redirect_to"] = target
+    frappe.local.response["message"] = target
+    return
 
     
 
