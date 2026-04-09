@@ -259,11 +259,41 @@
         font-size: 1.25rem !important;
     }
 
-    .btn-primary.frappe-modal-action {
-        background-color: var(--primary-color) !important;
-        padding: 8px 32px !important;
-        border: none !important;
+    /* Style the buttons in the modal footer specifically */
+    .modal-footer .btn {
+        padding: 8px 24px !important;
         font-weight: 600 !important;
+        border-radius: 6px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    /* "Yes" / Primary Button */
+    .modal-footer .btn-primary,
+    .modal-footer .frappe-modal-action {
+        background-color: #6366f1 !important; /* Indigo 500 */
+        color: #ffffff !important;
+        border: none !important;
+        box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2) !important;
+    }
+
+    .modal-footer .btn-primary:hover {
+        background-color: #4f46e5 !important; /* Indigo 600 */
+        transform: translateY(-1px) !important;
+    }
+
+    /* "No" / Close / Secondary Button */
+    .modal-footer .btn-default,
+    .modal-footer .btn-secondary,
+    .modal-footer .btn-modal-close {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: #94a3b8 !important; /* Slate 400 */
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .modal-footer .btn-default:hover,
+    .modal-footer .btn-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        color: #f1f5f9 !important; /* Slate 100 */
     }
 </style>
 {% endblock %}
@@ -528,67 +558,75 @@
                 window.location.href = "/login";
             }
         });
-    }
-
-    const registrationId = document.getElementById('internal-reg-id') ? document.getElementById('internal-reg-id').value.trim() : "None";
+    }    const registrationId = document.getElementById('internal-reg-id') ? document.getElementById('internal-reg-id').value.trim() : "None";
 
     async function updateMemberStatus(email, targetStatus) {
         const action = targetStatus === 'Approved' ? 'enable and approve' : 'disable and reject';
-        if (!confirm(`Are you sure you want to ${action} this member (${email})?`)) return;
-
-        frappe.call({
-            method: 'app.api.update_member_status',
-            args: {
-                registration_id: registrationId,
-                email: email,
-                status: targetStatus
-            },
-            callback: function (r) {
-                if (r.message && r.message.status === 'success') {
-                    frappe.show_alert({
-                        message: r.message.message,
-                        indicator: targetStatus === 'Approved' ? 'green' : 'orange'
-                    });
-                    loadMembers(); // Refresh list.
-                } else {
-                    frappe.msgprint({
-                        title: 'Error',
-                        message: r.message ? r.message.message : "Request failed",
-                        indicator: 'red'
-                    });
-                }
+        
+        frappe.confirm(
+            `Are you sure you want to <b>${action}</b> this member (${email})?`,
+            () => {
+                frappe.call({
+                    method: 'app.api.update_member_status',
+                    args: {
+                        registration_id: registrationId,
+                        email: email,
+                        status: targetStatus
+                    },
+                    callback: function (r) {
+                        if (r.message && r.message.status === 'success') {
+                            frappe.show_alert({
+                                message: r.message.message,
+                                indicator: targetStatus === 'Approved' ? 'green' : 'orange'
+                            });
+                            loadMembers(); // Refresh list.
+                        } else {
+                            frappe.msgprint({
+                                title: 'Error',
+                                message: r.message ? r.message.message : "Request failed",
+                                indicator: 'red'
+                            });
+                        }
+                    }
+                });
             }
-        });
+        );
     }
 
     async function toggleAdminStatus(email, isAdmin) {
         const action = isAdmin ? 'promote to admin' : 'revoke admin access for';
-        if (!confirm(`Are you sure you want to ${action} ${email}?`)) return;
-
-        frappe.call({
-            method: 'app.api.toggle_org_user_admin',
-            args: {
-                registration_id: registrationId,
-                email: email,
-                is_admin: isAdmin
-            },
-            callback: function (r) {
-                if (r.message && r.message.status === 'success') {
-                    frappe.show_alert({
-                        message: r.message.message,
-                        indicator: 'indigo'
-                    });
-                    loadMembers(); 
-                } else {
-                    frappe.msgprint({
-                        title: 'Error',
-                        message: r.message ? r.message.message : "Request failed",
-                        indicator: 'red'
-                    });
-                }
+        
+        frappe.confirm(
+            `Are you sure you want to <b>${action}</b> ${email}?`,
+            () => {
+                frappe.call({
+                    method: 'app.api.toggle_org_user_admin',
+                    args: {
+                        registration_id: registrationId,
+                        email: email,
+                        is_admin: isAdmin
+                    },
+                    callback: function (r) {
+                        if (r.message && r.message.status === 'success') {
+                            frappe.show_alert({
+                                message: r.message.message,
+                                indicator: 'indigo'
+                            });
+                            loadMembers(); 
+                        } else {
+                            frappe.msgprint({
+                                title: 'Error',
+                                message: r.message ? r.message.message : "Request failed",
+                                indicator: 'red'
+                            });
+                        }
+                    }
+                });
             }
-        });
+        );
     }
+
+
 
     async function loadMembers() {
         if (!registrationId || registrationId === "None") return;
