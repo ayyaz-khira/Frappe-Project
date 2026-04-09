@@ -70,7 +70,7 @@ fixtures = [
 # website user home page (by Role)
 role_home_page = {
     "Organization Admin": "dashboard",
-    "System Manager": "dashboard"
+    "System Manager": "admin-dashboard"
 }
 
 
