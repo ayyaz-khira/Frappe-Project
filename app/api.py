@@ -112,7 +112,7 @@ def validate_org_admin_route():
     # 1. Absolute Block: Non-managers cannot see ANY route with 'admin' in the name
     if not is_manager and "admin" in path:
         frappe.local.status_code = 404
-        raise frappe.PageDoesNotExistError
+        raise frappe.PageDoesNotExistError 
 
     # 2. Role Sandbox: Organization Admins are restricted to a specific whitelist
     if "Organization Admin" in roles and not is_manager:
@@ -121,7 +121,7 @@ def validate_org_admin_route():
             "logout", "me", "error", "404", "home", "update-password",
             "app", "desk", "crm"
         ]
-        
+         
         is_allowed = False
         for r in allowed_routes:
             if path == r or path.startswith(r + "/"):
