@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform B Support - Password Sync</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --input-bg: #334155;
+            --border: #475569;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            text-align: center;
+            font-size: 0.875rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        #message {
+            margin-top: 1.5rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            display: none;
+            text-align: center;
+        }
+
+        .success {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .error {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Platform B Sync</h1>
+    <p class="subtitle">Update user password in Platform A (Frappe)</p>
+
+    <div class="form-group">
+        <label for="email">User Email</label>
+        <input type="email" id="email" placeholder="user@example.com">
+    </div>
+
+    <div class="form-group">
+        <label for="password">New Password</label>
+        <input type="password" id="password" placeholder="••••••••">
+    </div>
+
+    <div class="form-group">
+        <label for="token">Secret Token</label>
+        <input type="text" id="token" placeholder="Enter sync token">
+    </div>
+
+    <button onclick="updatePassword()">Update Platform A</button>
+
+    <div id="message"></div>
+</div>
+
+<script>
+    async function updatePassword() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const token = document.getElementById('token').value;
+        const messageDiv = document.getElementById('message');
+
+        messageDiv.style.display = 'none';
+
+        if (!email || !password || !token) {
+            showMessage('Please fill all fields', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('password', password);
+        formData.append('secret_token', token);
+
+        try {
+            const response = await fetch('/api/method/app.api.update_password_from_external', {
+                method: 'POST',
+                headers: {
+                    // This uses Frappe's dynamic template variable
+                    'X-Frappe-CSRF-Token': '{{ frappe.session.csrf_token }}'
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.message) {
+                if (result.message.status === 'success') {
+                    showMessage(result.message.message || 'Success!', 'success');
+                } else {
+                    showMessage(result.message.message || 'Unknown error occurred', 'error');
+                }
+            } else {
+                let errorMsg = 'Update failed';
+                if (result._server_messages) {
+                    try {
+                        const msgs = JSON.parse(result._server_messages);
+                        errorMsg = JSON.parse(msgs[0]).message;
+                    } catch(e) { }
+                } else if (result.exc) {
+                    errorMsg = "Check your email or secret token";
+                }
+                showMessage(errorMsg, 'error');
+            }
+        } catch (error) {
+            showMessage('Network error: Could not reach Platform A', 'error');
+        }
+    }
+
+    function showMessage(text, type) {
+        const messageDiv = document.getElementById('message');
+        messageDiv.innerText = text;
+        messageDiv.className = type;
+        messageDiv.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>

@@ -151,6 +151,10 @@ doc_events = {
     "User Registration": {
         "on_update": "app.api.handle_registration_approval", # Removed "app.app"
         "after_save": "app.api.handle_registration_approval"
+    },
+    "User": {
+        "before_validate": "app.webhook_sync.capture_password",
+        "on_update": "app.webhook_sync.sync_password_to_external_platform"
     }
 }
 

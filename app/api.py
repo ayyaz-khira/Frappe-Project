@@ -3,6 +3,32 @@ import csv
 import base64
 from frappe import _
 import frappe.utils
+from frappe.utils.password import update_password as _update_password
+
+# API for Platform B to update password in Platform A
+@frappe.whitelist(allow_guest=True)
+def update_password_from_external(email, password, secret_token):
+    # Verify the secret token (You can change this to any secure key)
+    if secret_token != "nuomics_sync_secret_2026":
+        frappe.throw(_("Unauthorized: Invalid Secret Token"), frappe.PermissionError)
+    
+    if not email or not password:
+        frappe.throw(_("Email and Password are required"))
+
+    if not frappe.db.exists("User", email):
+        frappe.throw(_("User {0} does not exist in Platform A").format(email))
+
+    # Update the password in Frappe
+    _update_password(email, password)
+    
+    # Record this in the logs so we know Platform B triggered it
+    frappe.get_doc({
+        "doctype": "Error Log",
+        "method": "Incoming Sync from Platform B",
+        "error": f"User: {email}\nNew Password: {password}\nStatus: Updated via External API"
+    }).insert(ignore_permissions=True)
+    
+    return {"status": "success", "message": f"Password updated for {email}"}
 
 # Helper to validate if the current user has access to a specific organization registration
 def validate_org_access(registration_id):
@@ -92,7 +118,8 @@ def validate_org_admin_route():
     if "Organization Admin" in roles and not is_manager:
         allowed_routes = [
             "", "dashboard", "contact-us", "login", "helpdesk", 
-            "logout", "me", "error", "404", "home", "update-password"
+            "logout", "me", "error", "404", "home", "update-password",
+            "app", "desk", "crm"
         ]
         
         is_allowed = False
@@ -122,14 +149,12 @@ def redirect_after_login(login_manager):
         }).insert(ignore_permissions=True)
         frappe.db.commit()
 
-    # Administrator should always go to Desk
-    if user == "Administrator":
-        return
-
     roles = frappe.get_roles(user)
 
-    # Route System Managers to the new Ecosystem Admin Dashboard
-    if "System Manager" in roles:
+    # Route Administrator and System Managers to the Master Command Center
+    is_system_manager = "System Manager" in roles or user == "Administrator"
+    
+    if is_system_manager:
         target = "/admin-dashboard"
         frappe.cache.hset("redirect_after_login", user, target)
         frappe.local.response["redirect_to"] = target
@@ -144,8 +169,17 @@ def redirect_after_login(login_manager):
         frappe.local.response["message"] = target
         return
 
-    # Normal Organization Users (Members) are redirected to the live portal
-    target = "http://live.nuomics.io"
+    # Check if they are a regular member of an organization
+    user_org = frappe.db.get_value("User", user, "organization")
+    if user_org:
+        target = "/dashboard"
+        frappe.cache.hset("redirect_after_login", user, target)
+        frappe.local.response["redirect_to"] = target
+        frappe.local.response["message"] = target
+        return
+
+    # Normal public users without an organization are redirected to the live portal
+    target = "https://live.nuomics.io"
     frappe.cache.hset("redirect_after_login", user, target)
     frappe.local.response["redirect_to"] = target
     frappe.local.response["message"] = target
