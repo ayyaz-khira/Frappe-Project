@@ -53,4 +53,4 @@ def _log_sync(user_email: str, url: str, status, response: str):
             ),
         }).insert(ignore_permissions=True)
     except Exception:
-        pas
+        pass
