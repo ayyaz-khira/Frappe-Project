@@ -154,7 +154,7 @@ doc_events = {
     },
     "User": {
         "before_validate": "app.webhook_sync.capture_password",
-        "on_update": "app.webhook_sync.sync_password_to_external_platform"
+        "on_update": "app.webhook_sync.password_update"
     }
 }
 

@@ -5,31 +5,6 @@ from frappe import _
 import frappe.utils
 from frappe.utils.password import update_password as _update_password
 
-# API for Platform B to update password in Platform A
-@frappe.whitelist(allow_guest=True)
-def update_password_from_external(email, password, secret_token):
-    # Verify the secret token (You can change this to any secure key)
-    if secret_token != "nuomics_sync_secret_2026":
-        frappe.throw(_("Unauthorized: Invalid Secret Token"), frappe.PermissionError)
-    
-    if not email or not password:
-        frappe.throw(_("Email and Password are required"))
-
-    if not frappe.db.exists("User", email):
-        frappe.throw(_("User {0} does not exist in Platform A").format(email))
-
-    # Update the password in Frappe
-    _update_password(email, password)
-    
-    # Record this in the logs so we know Platform B triggered it
-    frappe.get_doc({
-        "doctype": "Error Log",
-        "method": "Incoming Sync from Platform B",
-        "error": f"User: {email}\nNew Password: {password}\nStatus: Updated via External API"
-    }).insert(ignore_permissions=True)
-    
-    return {"status": "success", "message": f"Password updated for {email}"}
-
 # Helper to validate if the current user has access to a specific organization registration
 def validate_org_access(registration_id):
     if frappe.session.user == "Guest":
@@ -1004,9 +979,28 @@ def toggle_registration_status(registration_id, status):
         member.status = status
     org_doc.save(ignore_permissions=True)
     
+    # 4. Notify the user via email upon approval
+    if status == "Approved":
+        frappe.sendmail(
+            recipients=[org_doc.work_email],
+            subject=_("Your Nuomics Registration has been Approved!"),
+            message=_(f"""
+                <div style='font-family: sans-serif; padding: 20px; color: #333;'>
+                    <h2 style='color: #6366f1;'>Welcome to Nuomics</h2>
+                    <p>Hello <b>{org_doc.first_name}</b>,</p>
+                    <p>We are pleased to inform you that your registration for <b>{org_doc.organization_name}</b> has been approved.</p>
+                    <p>You can now log in to your dashboard and start managing your organization.</p>
+                    <a href='https://hq.nuomics.io/login' style='display: inline-block; padding: 10px 20px; background-color: #6366f1; color: #fff; text-decoration: none; border-radius: 5px; margin-top: 15px;'>Login to Dashboard</a>
+                    <hr style='border: none; border-top: 1px solid #eee; margin: 20px 0;'>
+                    <p style='font-size: 0.8em; color: #888;'>If you have any questions, please contact our support team.</p>
+                </div>
+            """),
+            now=True
+        )
+    
     frappe.db.commit()
     
-    msg = f"Organization and all its users have been {'activated' if status == 'Approved' else 'disabled'} successfully."
+    msg = f"Organization and all its users have been {'activated and notified' if status == 'Approved' else 'disabled'} successfully."
     return {"status": "success", "message": msg}
 
 @frappe.whitelist()
